@@ -1,1 +1,101 @@
-<p>inicio works!</p>
+<main>
+  <div class="hero-section">
+    <h2>
+      Bienvenido al ZavalaTech Parking
+      <span class="car-emoji">🚗</span>
+    </h2>
+    <p class="subtitle">
+      Consulta en tiempo real la disponibilidad de espacios de estacionamiento.
+      Sistema actualizado automáticamente para tu comodidad.
+    </p>
+  </div>
+
+  <div class="status-section">
+    <div class="status-header">
+      <h3 class="status-title">🅿️ Disponibilidad en Tiempo Real</h3>
+
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <div class="status-indicators">
+          <div class="indicator disponibles">
+            🟢 <span class="indicator-value">{{ libres }}</span> Libres
+          </div>
+
+          <div class="indicator ocupados">
+            🔴 <span class="indicator-value">{{ ocupados }}</span> Ocupados
+          </div>
+
+          <div class="indicator total">
+            📊 <span class="indicator-value">{{ total }}</span> Total
+          </div>
+        </div>
+
+        <button class="btn-refresh" (click)="actualizarEstado()">🔄 Actualizar</button>
+      </div>
+    </div>
+
+    <div class="spaces-grid">
+      <div
+        *ngFor="let espacio of espacios"
+        [ngClass]="espacio.ocupado ? 'space-card ocupado' : 'space-card libre'"
+        (click)="espacio.ocupado ? mostrarInfoEspacio(espacio.vehiculo) : null"
+      >
+        <div class="space-number">E-{{ espacio.numero | number:'2.0' }}</div>
+        <div class="space-label">{{ espacio.ocupado ? 'Ocupado' : 'Libre' }}</div>
+
+        <div class="space-info" *ngIf="espacio.ocupado">
+          {{ espacio.vehiculo.tipo }}
+        </div>
+      </div>
+    </div>
+
+    <div class="update-time">
+      Última actualización: {{ horaActual }}
+    </div>
+  </div>
+
+  <!-- INFO EXTRA -->
+  <div class="info-section">
+    <div class="info-grid">
+
+      <div class="info-card">
+        <div class="info-icon">⏰</div>
+        <div class="info-title">Horario</div>
+        <div class="info-text">
+          Lunes a Viernes: 6:00 AM - 10:00 PM<br>
+          Sábados y Domingos: 8:00 AM - 8:00 PM
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">💰</div>
+        <div class="info-title">Tarifas</div>
+        <div class="info-text">
+          Primera hora: S/. 5.00<br>
+          Horas adicionales: S/. 3.00<br>
+          Tarifa diaria: S/. 25.00
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">📍</div>
+        <div class="info-title">Ubicación</div>
+        <div class="info-text">
+          Av. Andahuaylas, Andahuaylas<br>
+          Zona segura y vigilada 24/7<br>
+          Fácil acceso desde vías principales
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">📞</div>
+        <div class="info-title">Contacto</div>
+        <div class="info-text">
+          Teléfono: 922238687<br>
+          Email: info@Zavalatech.com<br>
+          WhatsApp: +51 922 238 687
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>

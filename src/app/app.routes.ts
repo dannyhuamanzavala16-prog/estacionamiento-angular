@@ -1,3 +1,16 @@
 import { Routes } from '@angular/router';
+import { InicioComponent } from './pages/inicio/inicio';
+import { Historial } from './pages/historial/historial';
+import { Estadisticas } from './pages/estadisticas/estadisticas';
+import { Login } from './pages/login/login';
 
-export const routes: Routes = [];
+export const routes: Routes = [
+  { path: '', component: InicioComponent, title: 'Inicio' },
+
+  { path: 'inicio', component: InicioComponent, title: 'Inicio' },
+  { path: 'historial', component: Historial, title: 'Historial' },
+  { path: 'estadisticas', component: Estadisticas, title: 'Estadísticas' },
+  { path: 'login', component: Login, title: 'Acceso Admin' },
+
+
+];
