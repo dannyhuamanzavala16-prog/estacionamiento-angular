@@ -1,1 +1,172 @@
 <p>vehiculos works!</p>
+<!-- vehiculo.component.html -->
+
+<!-- ===== CABECERA ===== -->
+<header>
+  <h1>ZavalaTech Parking</h1>
+  <nav>
+    <a routerLink="/inicio">Inicio</a>
+    <a routerLink="/vehiculos" class="activo">Vehículos</a>
+    <a routerLink="/historial">Historial</a>
+    <a routerLink="/estadisticas">Estadísticas</a>
+    <div class="admin-badge">
+      <span>👤</span>
+      <span id="adminName">Admin</span>
+    </div>
+    <button id="btnCerrarSesion" class="btn-logout">🚪 Salir</button>
+  </nav>
+</header>
+
+<!-- ===== CONTENIDO PRINCIPAL ===== -->
+<main>
+
+  <!-- ESTADO EN TIEMPO REAL -->
+  <section class="parking-status">
+    <div class="status-header">
+      <h2>🅿️ Estado del Estacionamiento en Tiempo Real</h2>
+      <div class="status-indicators">
+        <div class="indicator disponibles">
+          🟢 <span id="espaciosLibres">20</span> Libres
+        </div>
+        <div class="indicator ocupados">
+          🔴 <span id="espaciosOcupados">0</span> Ocupados
+        </div>
+        <div class="indicator total">
+          📊 <span id="espaciosTotal">20</span> Total
+        </div>
+        <button class="btn-refresh">🔄 Actualizar</button>
+      </div>
+    </div>
+    <div class="spaces-grid" id="espaciosGrid"></div>
+  </section>
+
+  <div class="dashboard-grid">
+
+    <!-- FORMULARIO DE REGISTRO -->
+    <section class="registro">
+      <h2>📝 Registrar Entrada de Vehículo</h2>
+      
+      <form id="formEntrada">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="placa">Placa del Vehículo *</label>
+            <input type="text" id="placa" placeholder="ABC-123" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="propietario">Propietario *</label>
+            <input type="text" id="propietario" placeholder="Juan Pérez" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="tipo">Tipo de Vehículo *</label>
+            <select id="tipo" required>
+              <option value="">Seleccionar tipo</option>
+              <option value="Auto">Auto 🚗</option>
+              <option value="Moto">Moto 🏍️</option>
+              <option value="Camioneta">Camioneta 🚙</option>
+              <option value="SUV">SUV 🚐</option>
+            </select>
+          </div>
+        </div>
+        
+        <button type="submit">✓ Registrar Entrada</button>
+      </form>
+      
+      <div id="mensaje" class="mensaje"></div>
+    </section>
+    
+    <!-- TABLA DE VEHÍCULOS -->
+    <section class="tabla">
+      <h2>🚗 Vehículos Registrados</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Espacio</th>
+              <th>Placa</th>
+              <th>Propietario</th>
+              <th>Tipo</th>
+              <th>Hora Entrada</th>
+              <th>Hora Salida</th>
+              <th>Duración</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tablaVehiculos">
+            <tr>
+              <td colspan="9" style="text-align:center; padding: 2rem; color: #64748b;">
+                No hay vehículos registrados actualmente.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ESTADÍSTICAS RÁPIDAS -->
+  <section class="quick-stats">
+    <h2>📊 Estadísticas de Hoy</h2>
+    
+    <div class="stat-card">
+      <div class="stat-label">Vehículos Hoy</div>
+      <div class="stat-value" id="vehiculosHoy">0</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Activos Ahora</div>
+      <div class="stat-value" id="vehiculosActivos">0</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Tiempo Promedio</div>
+      <div class="stat-value" id="tiempoPromedio">-</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Ocupación</div>
+      <div class="stat-value" id="porcentajeOcupacion">0%</div>
+    </div>
+  </section>
+
+  <!-- FILTROS -->
+  <section class="filters-section">
+    <h2>🔍 Filtros de Búsqueda</h2>
+    <div class="filters-grid">
+      <div class="form-group">
+        <label for="buscarPlaca">Buscar por Placa</label>
+        <input type="text" id="buscarPlaca" placeholder="ABC-123">
+      </div>
+      <div class="form-group">
+        <label for="filtroTipo">Tipo de Vehículo</label>
+        <select id="filtroTipo">
+          <option value="">Todos los tipos</option>
+          <option value="Auto">Auto 🚗</option>
+          <option value="Moto">Moto 🏍️</option>
+          <option value="Camioneta">Camioneta 🚙</option>
+          <option value="SUV">SUV 🚐</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filtroFecha">Fecha</label>
+        <input type="date" id="filtroFecha">
+      </div>
+      <div class="form-group">
+        <label for="filtroEstado">Estado</label>
+        <select id="filtroEstado">
+          <option value="">Todos</option>
+          <option value="activo">Solo Activos</option>
+          <option value="finalizado">Solo Finalizados</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== PIE DE PÁGINA ===== -->
+<footer>
+  © 2025 <strong>ZavalaTech</strong> | Sistema de Gestión de Estacionamiento | Todos los derechos reservados
+</footer>
