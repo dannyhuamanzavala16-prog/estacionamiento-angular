@@ -1,1 +1,168 @@
-<p>estadisticas works!</p>
+<!-- CABECERA -->
+<header>
+  <h1>ZavalaTech Parking</h1>
+  <nav>
+    <a routerLink="/inicio" routerLinkActive="active-link">Inicio</a>
+    <a routerLink="/historial" routerLinkActive="active-link">Historial</a>
+    <a routerLink="/estadisticas" routerLinkActive="active-link">Estadísticas</a>
+  </nav>
+</header>
+<main>
+  
+  <!-- ENCABEZADO -->
+  <div class="page-header">
+    <h1 class="page-title">📊 Panel de Estadísticas</h1>
+    <p class="page-subtitle">Análisis completo del rendimiento del estacionamiento</p>
+  </div>
+
+  <!-- ESTADÍSTICAS GENERALES -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-icon">🚗</span>
+        <span class="stat-card-title">Total de Vehículos</span>
+      </div>
+      <div class="stat-value">{{ totalVehiculos }}</div>
+      <div class="stat-description">Registros históricos totales</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-icon">⏱️</span>
+        <span class="stat-card-title">Tiempo Promedio</span>
+      </div>
+      <div class="stat-value">{{ promedioTiempo }}</div>
+      <div class="stat-description">Duración media de estancia</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-icon">📅</span>
+        <span class="stat-card-title">Vehículos Hoy</span>
+      </div>
+      <div class="stat-value">{{ vehiculosHoy }}</div>
+      <div class="stat-description">Registros del día actual</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <span class="stat-icon">🔹</span>
+        <span class="stat-card-title">Por Tipo de Vehículo</span>
+      </div>
+      <ul class="stat-list">
+        <li *ngIf="vehiculosPorTipo.length === 0">
+          <span>Cargando...</span>
+        </li>
+        <li *ngFor="let item of vehiculosPorTipo">
+          <span>{{ item.tipo }}</span>
+          <span class="stat-list-value">{{ item.cantidad }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ANÁLISIS POR DÍA DE LA SEMANA -->
+  <div class="analysis-section">
+    <h2 class="section-title">📆 Análisis por Día de la Semana</h2>
+    <div class="chart-container">
+      <div class="bar-chart" *ngIf="vehiculos.length > 0">
+        <div 
+          *ngFor="let count of vehiculosPorDia; let i = index" 
+          class="bar" 
+          [style.height.%]="calcularAlturaBarra(count, maxDia)">
+          <span class="bar-value">{{ count }}</span>
+          <span class="bar-label">{{ diasSemana[i] }}</span>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="vehiculos.length === 0">
+        <div class="empty-state-icon">📊</div>
+        <div>No hay datos disponibles</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANÁLISIS POR MES -->
+  <div class="analysis-section">
+    <h2 class="section-title">📊 Análisis por Mes del Año</h2>
+    <div class="chart-container">
+      <div class="bar-chart" *ngIf="vehiculos.length > 0">
+        <div 
+          *ngFor="let data of vehiculosPorMes; let i = index" 
+          class="bar" 
+          [style.height.%]="calcularAlturaBarra(data.total, maxMes)">
+          <span class="bar-value">{{ data.total }}</span>
+          <span class="bar-label">{{ meses[i] }}</span>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="vehiculos.length === 0">
+        <div class="empty-state-icon">📊</div>
+        <div>No hay datos disponibles</div>
+      </div>
+    </div>
+
+    <table class="stats-table" *ngIf="datosTablaMeses.length > 0">
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th>Total Vehículos</th>
+          <th>Tiempo Promedio</th>
+          <th>Tipo Más Común</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dato of datosTablaMeses">
+          <td>{{ dato.mes }}</td>
+          <td class="highlight">{{ dato.total }}</td>
+          <td>{{ dato.tiempoPromedio }}</td>
+          <td>{{ dato.tipoMasComun }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="empty-state" *ngIf="datosTablaMeses.length === 0">
+      No hay datos
+    </div>
+  </div>
+
+  <!-- ANÁLISIS POR AÑO -->
+  <div class="analysis-section">
+    <h2 class="section-title">📈 Análisis por Año</h2>
+    <div class="chart-container">
+      <div class="bar-chart" *ngIf="anios.length > 0">
+        <div 
+          *ngFor="let anio of anios" 
+          class="bar" 
+          [style.height.%]="calcularAlturaBarra(vehiculosPorAnio[anio].total, maxAnio)">
+          <span class="bar-value">{{ vehiculosPorAnio[anio].total }}</span>
+          <span class="bar-label">{{ anio }}</span>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="anios.length === 0">
+        <div class="empty-state-icon">📊</div>
+        <div>No hay datos disponibles</div>
+      </div>
+    </div>
+
+    <table class="stats-table" *ngIf="datosTablasAnios.length > 0">
+      <thead>
+        <tr>
+          <th>Año</th>
+          <th>Total Vehículos</th>
+          <th>Tiempo Promedio</th>
+          <th>Mes Más Activo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dato of datosTablasAnios">
+          <td>{{ dato.anio }}</td>
+          <td class="highlight">{{ dato.total }}</td>
+          <td>{{ dato.tiempoPromedio }}</td>
+          <td>{{ dato.mesMasActivo }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="empty-state" *ngIf="datosTablasAnios.length === 0">
+      No hay datos
+    </div>
+  </div>
+
+</main>

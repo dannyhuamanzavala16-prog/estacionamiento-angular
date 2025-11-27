@@ -1,1 +1,155 @@
-<p>historial works!</p>
+<!-- CABECERA -->
+<header>
+  <h1>ZavalaTech Parking</h1>
+  <nav>
+    <a routerLink="/inicio" routerLinkActive="active-link">Inicio</a>
+    <a routerLink="/historial" routerLinkActive="active-link">Historial</a>
+    <a routerLink="/estadisticas" routerLinkActive="active-link">Estadísticas</a>
+    <button class="btn-admin" (click)="goToLogin()">🔐 Acceso Admin</button>
+  </nav>
+</header>
+
+<main>
+  
+  <!-- ENCABEZADO -->
+  <div class="header-section">
+    <h2>📊 Historial de Vehículos</h2>
+    <p class="subtitle">
+      Consulta el registro completo de todos los vehículos que han utilizado el estacionamiento.
+      Incluye información detallada de entradas, salidas y tiempos de permanencia.
+    </p>
+
+    <!-- ESTADÍSTICAS RÁPIDAS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total de Registros</span>
+        <span class="stat-value">{{ totalRegistros }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Vehículos Hoy</span>
+        <span class="stat-value">{{ registrosHoy }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Tiempo Promedio</span>
+        <span class="stat-value">{{ tiempoPromedio }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Tipo Más Común</span>
+        <span class="stat-value">{{ tipoComun }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters-section">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label for="filtroPlaca">🔍 Buscar por Placa</label>
+        <input 
+          type="text" 
+          id="filtroPlaca" 
+          placeholder="Ej: ABC-123"
+          [(ngModel)]="filtroPlaca"
+          (input)="actualizarTabla()">
+      </div>
+      <div class="filter-group">
+        <label for="filtroPropietario">👤 Buscar por Propietario</label>
+        <input 
+          type="text" 
+          id="filtroPropietario" 
+          placeholder="Ej: Juan Pérez"
+          [(ngModel)]="filtroPropietario"
+          (input)="actualizarTabla()">
+      </div>
+      <div class="filter-group">
+        <label for="filtroTipo">🚗 Tipo de Vehículo</label>
+        <select 
+          id="filtroTipo"
+          [(ngModel)]="filtroTipo"
+          (change)="actualizarTabla()">
+          <option value="">Todos los tipos</option>
+          <option value="Auto">Auto 🚗</option>
+          <option value="Moto">Moto 🏍️</option>
+          <option value="Camioneta">Camioneta 🚙</option>
+          <option value="SUV">SUV 🚐</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filtroFecha">📅 Fecha</label>
+        <input 
+          type="date" 
+          id="filtroFecha"
+          [(ngModel)]="filtroFecha"
+          (change)="actualizarTabla()">
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE HISTORIAL -->
+  <div class="table-section">
+    <div class="table-header">
+      <h3>📋 Registros Completos</h3>
+      <button class="export-btn" (click)="exportarCSV()">📥 Exportar CSV</button>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Espacio</th>
+            <th>Placa</th>
+            <th>Propietario</th>
+            <th>Tipo</th>
+            <th>Fecha</th>
+            <th>Hora Entrada</th>
+            <th>Hora Salida</th>
+            <th>Tiempo Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="vehiculosFiltrados.length === 0">
+            <td colspan="8" class="empty-state">
+              <div class="empty-state-icon">🔍</div>
+              <div>No se encontraron registros que coincidan con los filtros.</div>
+            </td>
+          </tr>
+          <tr *ngFor="let vehiculo of vehiculosFiltrados">
+            <td>
+              <span class="espacio-badge" *ngIf="vehiculo.espacio">
+                🅿️ E-{{ vehiculo.espacio < 10 ? '0' + vehiculo.espacio : vehiculo.espacio }}
+              </span>
+              <br *ngIf="vehiculo.columna">
+              <small style="color: #64748b;" *ngIf="vehiculo.columna">
+                Col {{ vehiculo.columna }}
+              </small>
+              <span *ngIf="!vehiculo.espacio" style="color: #64748b;">-</span>
+            </td>
+            <td>
+              <span class="placa-badge">{{ vehiculo.placa }}</span>
+            </td>
+            <td>{{ vehiculo.propietario }}</td>
+            <td>{{ vehiculo.tipo }}</td>
+            <td>{{ vehiculo.horaEntrada | date:'dd/MM/yyyy' }}</td>
+            <td>{{ vehiculo.horaEntrada | date:'shortTime' }}</td>
+            <td>
+              <span *ngIf="vehiculo.horaSalida">
+                {{ vehiculo.horaSalida | date:'shortTime' }}
+              </span>
+              <span *ngIf="!vehiculo.horaSalida" style="color: #64748b;">
+                Sin registro
+              </span>
+            </td>
+            <td style="font-weight: 600;">
+              {{ calcularTiempo(vehiculo.horaEntrada, vehiculo.horaSalida) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- PIE DE PÁGINA -->
+<footer>
+  © 2025 <strong>ZavalaTech</strong> | Sistema de Gestión de Estacionamiento | Todos los derechos reservados
+</footer>

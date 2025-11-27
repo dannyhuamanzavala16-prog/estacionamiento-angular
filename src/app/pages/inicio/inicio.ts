@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-inicio',
-  standalone: true,                  // ✅ IMPORTANTE
-  imports: [CommonModule, DecimalPipe],  // ✅ NGFOR, NGIF, NGCLASS, |number
+  standalone: true,
+  imports: [CommonModule, DecimalPipe, RouterModule],
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css']
 })
@@ -20,7 +21,10 @@ export class InicioComponent {
 
   espacios: any[] = [];
 
+  constructor(private router: Router) {}
+
   ngOnInit() {
+    console.log('🏠 Inicio component cargado');
     this.actualizarEstado();
     setInterval(() => this.actualizarEstado(), 30000);
   }
@@ -31,7 +35,7 @@ export class InicioComponent {
     const ocupadosSet = new Set<number>();
 
     vehiculos.forEach((v: any) => {
-      if (!v.horaSalida && v.espacio) {
+      if (v.estado === 'activo' && v.espacio) {
         ocupadosSet.add(v.espacio);
       }
     });
@@ -44,7 +48,7 @@ export class InicioComponent {
 
     for (let i = 1; i <= this.TOTAL_ESPACIOS; i++) {
       const ocupado = ocupadosSet.has(i);
-      const vehiculo = vehiculos.find((v: any) => v.espacio === i && !v.horaSalida);
+      const vehiculo = vehiculos.find((v: any) => v.espacio === i && v.estado === 'activo');
 
       this.espacios.push({
         numero: i,
@@ -63,7 +67,7 @@ export class InicioComponent {
     alert(`
 📍 Espacio E-${String(vehiculo.espacio).padStart(2, '0')}
 🚙 Tipo: ${vehiculo.tipo}
-📍 Columna: ${vehiculo.columna}
+👤 Propietario: ${vehiculo.propietario}
 🕐 Entrada: ${entrada.toLocaleTimeString('es-PE')}
 ⏱️ Tiempo dentro: ${this.calcularTiempo(entrada, ahora)}
     `);
@@ -78,5 +82,10 @@ export class InicioComponent {
     if (minutos > 0) return `${minutos}m`;
 
     return `${segundos}s`;
+  }
+
+  goToLogin() {
+    console.log('🔐 Navegando a login...');
+    this.router.navigate(['/login']);
   }
 }

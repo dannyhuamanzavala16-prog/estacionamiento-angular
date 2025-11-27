@@ -6,13 +6,11 @@ import { Login } from './pages/login/login';
 import { Vehiculos } from './pages/vehiculos/vehiculos';
 
 export const routes: Routes = [
-  { path: '', component: InicioComponent, title: 'Inicio' },
-
+  { path: '', redirectTo: '/inicio', pathMatch: 'full' },
   { path: 'inicio', component: InicioComponent, title: 'Inicio' },
   { path: 'historial', component: Historial, title: 'Historial' },
   { path: 'estadisticas', component: Estadisticas, title: 'Estadísticas' },
   { path: 'login', component: Login, title: 'Acceso Admin' },
-  { path: 'vehiculos', component: Vehiculos, title: 'Vehiculos' },
-
-
+  { path: 'vehiculos', component: Vehiculos, title: 'Vehículos' },
+  { path: '**', redirectTo: '/inicio' }
 ];

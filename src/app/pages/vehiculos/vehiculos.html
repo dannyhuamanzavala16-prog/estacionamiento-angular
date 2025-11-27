@@ -1,20 +1,19 @@
-<p>vehiculos works!</p>
-<!-- vehiculo.component.html -->
-
-<!-- ===== CABECERA ===== -->
-<header>
-  <h1>ZavalaTech Parking</h1>
-  <nav>
-    <a routerLink="/inicio">Inicio</a>
-    <a routerLink="/vehiculos" class="activo">Vehículos</a>
-    <a routerLink="/historial">Historial</a>
-    <a routerLink="/estadisticas">Estadísticas</a>
-    <div class="admin-badge">
-      <span>👤</span>
-      <span id="adminName">Admin</span>
-    </div>
-    <button id="btnCerrarSesion" class="btn-logout">🚪 Salir</button>
-  </nav>
+<!-- ===== CABECERA DE ADMIN ===== -->
+<header class="admin-header">
+  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap;">
+    <h1>ZavalaTech Parking</h1>
+    <nav>
+      <a (click)="irAInicio()" style="cursor: pointer;">Inicio</a>
+      <a class="activo">Vehículos</a>
+      <a (click)="irAHistorial()" style="cursor: pointer;">Historial</a>
+      <a (click)="irAEstadisticas()" style="cursor: pointer;">Estadísticas</a>
+      <div class="admin-badge">
+        <span>👤</span>
+        <span>{{ adminName }}</span>
+      </div>
+      <button (click)="cerrarSesion()" class="btn-logout" type="button">🚪 Salir</button>
+    </nav>
+  </div>
 </header>
 
 <!-- ===== CONTENIDO PRINCIPAL ===== -->
@@ -26,18 +25,17 @@
       <h2>🅿️ Estado del Estacionamiento en Tiempo Real</h2>
       <div class="status-indicators">
         <div class="indicator disponibles">
-          🟢 <span id="espaciosLibres">20</span> Libres
+          🟢 <span>{{ espaciosLibres }}</span> Libres
         </div>
         <div class="indicator ocupados">
-          🔴 <span id="espaciosOcupados">0</span> Ocupados
+          🔴 <span>{{ espaciosOcupados }}</span> Ocupados
         </div>
         <div class="indicator total">
-          📊 <span id="espaciosTotal">20</span> Total
+          📊 <span>{{ espaciosTotal }}</span> Total
         </div>
-        <button class="btn-refresh">🔄 Actualizar</button>
+        <button class="btn-refresh" (click)="actualizarEstadisticas()">🔄 Actualizar</button>
       </div>
     </div>
-    <div class="spaces-grid" id="espaciosGrid"></div>
   </section>
 
   <div class="dashboard-grid">
@@ -46,7 +44,7 @@
     <section class="registro">
       <h2>📝 Registrar Entrada de Vehículo</h2>
       
-      <form id="formEntrada">
+      <form (submit)="registrarVehiculo($event)">
         <div class="form-grid">
           <div class="form-group">
             <label for="placa">Placa del Vehículo *</label>
@@ -73,12 +71,12 @@
         <button type="submit">✓ Registrar Entrada</button>
       </form>
       
-      <div id="mensaje" class="mensaje"></div>
+      <div id="mensaje" class="mensaje" style="display: none;"></div>
     </section>
     
     <!-- TABLA DE VEHÍCULOS -->
     <section class="tabla">
-      <h2>🚗 Vehículos Registrados</h2>
+      <h2>🚗 Vehículos Registrados ({{ vehiculos.length }})</h2>
       <div class="table-container">
         <table>
           <thead>
@@ -94,10 +92,33 @@
               <th>Acción</th>
             </tr>
           </thead>
-          <tbody id="tablaVehiculos">
-            <tr>
+          <tbody>
+            <tr *ngIf="vehiculos.length === 0">
               <td colspan="9" style="text-align:center; padding: 2rem; color: #64748b;">
                 No hay vehículos registrados actualmente.
+              </td>
+            </tr>
+            <tr *ngFor="let vehiculo of vehiculos">
+              <td>E-{{ vehiculo.espacio < 10 ? '0' + vehiculo.espacio : vehiculo.espacio }}</td>
+              <td><strong>{{ vehiculo.placa }}</strong></td>
+              <td>{{ vehiculo.propietario }}</td>
+              <td>{{ vehiculo.tipo }}</td>
+              <td>{{ formatearFecha(vehiculo.horaEntrada) }}</td>
+              <td>{{ vehiculo.horaSalida ? formatearFecha(vehiculo.horaSalida) : '-' }}</td>
+              <td>{{ vehiculo.duracion || '-' }}</td>
+              <td>
+                <span [class]="vehiculo.estado === 'activo' ? 'badge-activo' : 'badge-finalizado'">
+                  {{ vehiculo.estado === 'activo' ? '🟢 Activo' : '🔴 Finalizado' }}
+                </span>
+              </td>
+              <td>
+                <button 
+                  *ngIf="vehiculo.estado === 'activo'" 
+                  (click)="finalizarVehiculo(vehiculo)"
+                  class="btn-finalizar">
+                  ✓ Finalizar
+                </button>
+                <span *ngIf="vehiculo.estado === 'finalizado'">-</span>
               </td>
             </tr>
           </tbody>
@@ -112,55 +133,22 @@
     
     <div class="stat-card">
       <div class="stat-label">Vehículos Hoy</div>
-      <div class="stat-value" id="vehiculosHoy">0</div>
+      <div class="stat-value">{{ vehiculosHoy }}</div>
     </div>
 
     <div class="stat-card">
       <div class="stat-label">Activos Ahora</div>
-      <div class="stat-value" id="vehiculosActivos">0</div>
+      <div class="stat-value">{{ vehiculosActivos }}</div>
     </div>
 
     <div class="stat-card">
       <div class="stat-label">Tiempo Promedio</div>
-      <div class="stat-value" id="tiempoPromedio">-</div>
+      <div class="stat-value">{{ tiempoPromedio }}</div>
     </div>
 
     <div class="stat-card">
       <div class="stat-label">Ocupación</div>
-      <div class="stat-value" id="porcentajeOcupacion">0%</div>
-    </div>
-  </section>
-
-  <!-- FILTROS -->
-  <section class="filters-section">
-    <h2>🔍 Filtros de Búsqueda</h2>
-    <div class="filters-grid">
-      <div class="form-group">
-        <label for="buscarPlaca">Buscar por Placa</label>
-        <input type="text" id="buscarPlaca" placeholder="ABC-123">
-      </div>
-      <div class="form-group">
-        <label for="filtroTipo">Tipo de Vehículo</label>
-        <select id="filtroTipo">
-          <option value="">Todos los tipos</option>
-          <option value="Auto">Auto 🚗</option>
-          <option value="Moto">Moto 🏍️</option>
-          <option value="Camioneta">Camioneta 🚙</option>
-          <option value="SUV">SUV 🚐</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="filtroFecha">Fecha</label>
-        <input type="date" id="filtroFecha">
-      </div>
-      <div class="form-group">
-        <label for="filtroEstado">Estado</label>
-        <select id="filtroEstado">
-          <option value="">Todos</option>
-          <option value="activo">Solo Activos</option>
-          <option value="finalizado">Solo Finalizados</option>
-        </select>
-      </div>
+      <div class="stat-value">{{ porcentajeOcupacion }}%</div>
     </div>
   </section>
 
