@@ -1,7 +1,7 @@
 <!-- ===== CABECERA DE ADMIN ===== -->
 <header class="admin-header">
-  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap;">
-    <h1>ZavalaTech Parking</h1>
+  <div class="header-container">
+    <h1>🅿️ ZavalaTech Parking</h1>
     <nav>
       <a (click)="irAInicio()" style="cursor: pointer;">Inicio</a>
       <a class="activo">Vehículos</a>
@@ -36,36 +36,121 @@
         <button class="btn-refresh" (click)="actualizarEstadisticas()">🔄 Actualizar</button>
       </div>
     </div>
+    
+    <div class="spaces-grid">
+      <!-- Fila 1: E-01 a E-14 -->
+      <div class="space-card ocupado">
+        <div class="space-number">E-01</div>
+        <div class="space-label">OCUPADO</div>
+        <div class="space-placa">ACA-722</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-02</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-03</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-04</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-05</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-06</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-07</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-08</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-09</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-10</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-11</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-12</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-13</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-14</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      
+      <!-- Fila 2: E-15 a E-20 -->
+      <div class="space-card libre">
+        <div class="space-number">E-15</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-16</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-17</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-18</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-19</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+      <div class="space-card libre">
+        <div class="space-number">E-20</div>
+        <div class="space-label">LIBRE</div>
+      </div>
+    </div>
   </section>
 
   <div class="dashboard-grid">
 
     <!-- FORMULARIO DE REGISTRO -->
     <section class="registro">
-      <h2>📝 Registrar Entrada de Vehículo</h2>
+      <h2>📋 Registrar Entrada de Vehículo</h2>
       
       <form (submit)="registrarVehiculo($event)">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="placa">Placa del Vehículo *</label>
-            <input type="text" id="placa" placeholder="ABC-123" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="propietario">Propietario *</label>
-            <input type="text" id="propietario" placeholder="Juan Pérez" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="tipo">Tipo de Vehículo *</label>
-            <select id="tipo" required>
-              <option value="">Seleccionar tipo</option>
-              <option value="Auto">Auto 🚗</option>
-              <option value="Moto">Moto 🏍️</option>
-              <option value="Camioneta">Camioneta 🚙</option>
-              <option value="SUV">SUV 🚐</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="placa">Placa del Vehículo *</label>
+          <input type="text" id="placa" placeholder="ABC-123" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="propietario">Propietario *</label>
+          <input type="text" id="propietario" placeholder="Juan Pérez" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="tipo">Tipo de Vehículo *</label>
+          <select id="tipo" required>
+            <option value="">Seleccionar tipo</option>
+            <option value="Auto">Auto 🚗</option>
+            <option value="Moto">Moto 🏍️</option>
+            <option value="Camioneta">Camioneta 🚙</option>
+            <option value="SUV">SUV 🚐</option>
+          </select>
         </div>
         
         <button type="submit">✓ Registrar Entrada</button>
@@ -76,20 +161,20 @@
     
     <!-- TABLA DE VEHÍCULOS -->
     <section class="tabla">
-      <h2>🚗 Vehículos Registrados ({{ vehiculos.length }})</h2>
+      <h2>🚗 Vehículos Registrados</h2>
       <div class="table-container">
         <table>
           <thead>
             <tr>
-              <th>Espacio</th>
-              <th>Placa</th>
-              <th>Propietario</th>
-              <th>Tipo</th>
-              <th>Hora Entrada</th>
-              <th>Hora Salida</th>
-              <th>Duración</th>
-              <th>Estado</th>
-              <th>Acción</th>
+              <th>ESPACIO</th>
+              <th>PLACA</th>
+              <th>PROPIETARIO</th>
+              <th>TIPO</th>
+              <th>HORA ENTRADA</th>
+              <th>HORA SALIDA</th>
+              <th>DURACIÓN</th>
+              <th>ESTADO</th>
+              <th>ACCIÓN</th>
             </tr>
           </thead>
           <tbody>
@@ -99,8 +184,11 @@
               </td>
             </tr>
             <tr *ngFor="let vehiculo of vehiculos">
-              <td>E-{{ vehiculo.espacio < 10 ? '0' + vehiculo.espacio : vehiculo.espacio }}</td>
-              <td><strong>{{ vehiculo.placa }}</strong></td>
+              <td>
+                <div class="espacio-col">E-{{ vehiculo.espacio < 10 ? '0' + vehiculo.espacio : vehiculo.espacio }}</div>
+                <div class="espacio-num">Col {{ vehiculo.columna }}</div>
+              </td>
+              <td><span class="placa-badge">{{ vehiculo.placa }}</span></td>
               <td>{{ vehiculo.propietario }}</td>
               <td>{{ vehiculo.tipo }}</td>
               <td>{{ formatearFecha(vehiculo.horaEntrada) }}</td>
@@ -108,17 +196,17 @@
               <td>{{ vehiculo.duracion || '-' }}</td>
               <td>
                 <span [class]="vehiculo.estado === 'activo' ? 'badge-activo' : 'badge-finalizado'">
-                  {{ vehiculo.estado === 'activo' ? '🟢 Activo' : '🔴 Finalizado' }}
+                  {{ vehiculo.estado === 'activo' ? 'ACTIVO' : 'FINALIZADO' }}
                 </span>
               </td>
               <td>
                 <button 
                   *ngIf="vehiculo.estado === 'activo'" 
                   (click)="finalizarVehiculo(vehiculo)"
-                  class="btn-finalizar">
-                  ✓ Finalizar
+                  class="btn-salida">
+                  🚀 Registrar Salida
                 </button>
-                <span *ngIf="vehiculo.estado === 'finalizado'">-</span>
+                <span *ngIf="vehiculo.estado === 'finalizado'" style="color: #64748b; font-size: 0.875rem;">✓ Completado</span>
               </td>
             </tr>
           </tbody>
@@ -131,24 +219,26 @@
   <section class="quick-stats">
     <h2>📊 Estadísticas de Hoy</h2>
     
-    <div class="stat-card">
-      <div class="stat-label">Vehículos Hoy</div>
-      <div class="stat-value">{{ vehiculosHoy }}</div>
-    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Vehículos Hoy</div>
+        <div class="stat-value">{{ vehiculosHoy }}</div>
+      </div>
 
-    <div class="stat-card">
-      <div class="stat-label">Activos Ahora</div>
-      <div class="stat-value">{{ vehiculosActivos }}</div>
-    </div>
+      <div class="stat-card">
+        <div class="stat-label">Activos Ahora</div>
+        <div class="stat-value">{{ vehiculosActivos }}</div>
+      </div>
 
-    <div class="stat-card">
-      <div class="stat-label">Tiempo Promedio</div>
-      <div class="stat-value">{{ tiempoPromedio }}</div>
-    </div>
+      <div class="stat-card">
+        <div class="stat-label">Tiempo Promedio</div>
+        <div class="stat-value">{{ tiempoPromedio }}</div>
+      </div>
 
-    <div class="stat-card">
-      <div class="stat-label">Ocupación</div>
-      <div class="stat-value">{{ porcentajeOcupacion }}%</div>
+      <div class="stat-card">
+        <div class="stat-label">Ocupación</div>
+        <div class="stat-value">{{ porcentajeOcupacion }}%</div>
+      </div>
     </div>
   </section>
 

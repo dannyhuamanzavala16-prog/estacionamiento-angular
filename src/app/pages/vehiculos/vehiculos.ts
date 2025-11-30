@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 
 interface Vehiculo {
   espacio: number;
+  columna: number;
   placa: string;
   propietario: string;
   tipo: string;
@@ -12,6 +13,13 @@ interface Vehiculo {
   horaSalida?: string;
   duracion?: string;
   estado: 'activo' | 'finalizado';
+}
+
+interface Espacio {
+  numero: number;
+  ocupado: boolean;
+  placa?: string;
+  vehiculo?: Vehiculo;
 }
 
 @Component({
@@ -24,6 +32,7 @@ interface Vehiculo {
 export class Vehiculos implements OnInit {
 
   vehiculos: Vehiculo[] = [];
+  espacios: Espacio[] = [];
   totalEspacios: number = 20;
   adminName: string = 'Admin';
 
@@ -55,9 +64,47 @@ export class Vehiculos implements OnInit {
     this.adminName = localStorage.getItem('adminUsername') || 'Admin';
     console.log('👤 Admin:', this.adminName);
 
+    // Inicializar espacios
+    this.inicializarEspacios();
+
     // Cargar vehículos
     this.cargarVehiculos();
     this.actualizarEstadisticas();
+    this.actualizarGridEspacios();
+  }
+
+  inicializarEspacios(): void {
+    this.espacios = [];
+    for (let i = 1; i <= this.totalEspacios; i++) {
+      this.espacios.push({
+        numero: i,
+        ocupado: false,
+        placa: undefined,
+        vehiculo: undefined
+      });
+    }
+    console.log('✅ Espacios inicializados:', this.espacios.length);
+  }
+
+  actualizarGridEspacios(): void {
+    // Resetear todos los espacios
+    this.espacios.forEach(espacio => {
+      espacio.ocupado = false;
+      espacio.placa = undefined;
+      espacio.vehiculo = undefined;
+    });
+
+    // Marcar espacios ocupados
+    this.vehiculos.filter(v => v.estado === 'activo').forEach(vehiculo => {
+      const espacio = this.espacios.find(e => e.numero === vehiculo.espacio);
+      if (espacio) {
+        espacio.ocupado = true;
+        espacio.placa = vehiculo.placa;
+        espacio.vehiculo = vehiculo;
+      }
+    });
+
+    console.log('🔄 Grid de espacios actualizado');
   }
 
   cargarVehiculos(): void {
@@ -87,15 +134,26 @@ export class Vehiculos implements OnInit {
     const propietarioInput = form.querySelector('#propietario') as HTMLInputElement;
     const tipoSelect = form.querySelector('#tipo') as HTMLSelectElement;
 
-    const placa = placaInput?.value || '';
-    const propietario = propietarioInput?.value || '';
+    const placa = placaInput?.value.trim() || '';
+    const propietario = propietarioInput?.value.trim() || '';
     const tipo = tipoSelect?.value || '';
 
     console.log('📋 Datos del formulario:', { placa, propietario, tipo });
 
     if (!placa || !propietario || !tipo) {
       console.log('❌ Campos incompletos');
-      this.mostrarMensaje('Todos los campos son obligatorios', 'error');
+      this.mostrarMensaje('⚠️ Todos los campos son obligatorios', 'error');
+      return;
+    }
+
+    // Verificar si el vehículo ya está registrado
+    const yaRegistrado = this.vehiculos.find(
+      v => v.placa.toUpperCase() === placa.toUpperCase() && v.estado === 'activo'
+    );
+
+    if (yaRegistrado) {
+      console.log('❌ Vehículo ya registrado');
+      this.mostrarMensaje('🚫 Este vehículo ya está registrado en el estacionamiento', 'error');
       return;
     }
 
@@ -104,12 +162,16 @@ export class Vehiculos implements OnInit {
 
     if (espacioLibre === -1) {
       console.log('❌ No hay espacios disponibles');
-      this.mostrarMensaje('No hay espacios disponibles', 'error');
+      this.mostrarMensaje('🚫 No hay espacios disponibles', 'error');
       return;
     }
 
+    // Calcular columna (4 columnas de 5 espacios cada una)
+    const columna = Math.ceil(espacioLibre / 5);
+
     const nuevoVehiculo: Vehiculo = {
       espacio: espacioLibre,
+      columna: columna,
       placa: placa.toUpperCase(),
       propietario,
       tipo,
@@ -122,15 +184,24 @@ export class Vehiculos implements OnInit {
     this.vehiculos.push(nuevoVehiculo);
     this.guardarVehiculos();
     this.actualizarEstadisticas();
+    this.actualizarGridEspacios();
     
     form.reset();
-    this.mostrarMensaje('Vehículo registrado exitosamente', 'success');
+    this.mostrarMensaje(`✅ Vehículo registrado en E-${String(espacioLibre).padStart(2, '0')} (Columna ${columna})`, 'success');
     console.log('✅ Registro completado');
   }
 
   finalizarVehiculo(vehiculo: Vehiculo): void {
     console.log('🏁 Finalizando vehículo:', vehiculo.placa);
     
+    const confirmar = window.confirm(
+      `¿Registrar salida del vehículo ${vehiculo.placa}?`
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
     vehiculo.horaSalida = new Date().toISOString();
     vehiculo.duracion = this.calcularDuracion(
       new Date(vehiculo.horaEntrada), 
@@ -140,7 +211,32 @@ export class Vehiculos implements OnInit {
     
     this.guardarVehiculos();
     this.actualizarEstadisticas();
+    this.actualizarGridEspacios();
+    
+    this.mostrarMensaje(
+      `🚗 Salida registrada para ${vehiculo.placa}. Duración: ${vehiculo.duracion}`, 
+      'success'
+    );
+    
     console.log('✅ Vehículo finalizado');
+  }
+
+  mostrarDetallesEspacio(espacio: Espacio): void {
+    if (!espacio.vehiculo) return;
+
+    const v = espacio.vehiculo;
+    const tiempoActual = this.calcularTiempoActual(new Date(v.horaEntrada));
+    
+    const mensaje = `📋 Detalles del Espacio E-${String(v.espacio).padStart(2, '0')}
+
+🚗 Placa: ${v.placa}
+👤 Propietario: ${v.propietario}
+🚙 Tipo: ${v.tipo}
+📍 Columna: ${v.columna}
+🕐 Entrada: ${this.formatearFecha(v.horaEntrada)}
+⏱️ Tiempo: ${tiempoActual}`;
+
+    alert(mensaje);
   }
 
   buscarEspacioLibre(): number {
@@ -155,10 +251,29 @@ export class Vehiculos implements OnInit {
 
   calcularDuracion(entrada: Date, salida: Date): string {
     const diff = salida.getTime() - entrada.getTime();
-    const minutos = Math.floor(diff / 60000);
+    const segundos = Math.floor(diff / 1000);
+    const minutos = Math.floor(segundos / 60);
     const horas = Math.floor(minutos / 60);
+    const dias = Math.floor(horas / 24);
+    
     const min = minutos % 60;
-    return `${horas}h ${min}m`;
+    const h = horas % 24;
+
+    if (dias > 0) {
+      return `${dias}d ${h}h ${min}m`;
+    } else if (horas > 0) {
+      return `${horas}h ${min}m`;
+    } else if (minutos > 0) {
+      return `${minutos}m`;
+    } else {
+      return `${segundos}s`;
+    }
+  }
+
+  calcularTiempoActual(entrada: Date): string {
+    const ahora = new Date();
+    const duracion = this.calcularDuracion(entrada, ahora);
+    return `⏱️ ${duracion}`;
   }
 
   actualizarEstadisticas(): void {
@@ -175,29 +290,46 @@ export class Vehiculos implements OnInit {
     this.espaciosLibres = this.totalEspacios - this.espaciosOcupados;
     this.espaciosTotal = this.totalEspacios;
 
-    const duraciones = this.vehiculos
-      .filter(v => v.duracion)
-      .map(v => {
-        const match = v.duracion!.match(/(\d+)h (\d+)m/);
+    // Calcular tiempo promedio
+    const finalizados = this.vehiculos.filter(v => v.duracion);
+    
+    if (finalizados.length > 0) {
+      const duraciones = finalizados.map(v => {
+        const match = v.duracion!.match(/(?:(\d+)d\s*)?(?:(\d+)h\s*)?(?:(\d+)m)?/);
         if (match) {
-          return parseInt(match[1]) * 60 + parseInt(match[2]);
+          const dias = parseInt(match[1] || '0');
+          const horas = parseInt(match[2] || '0');
+          const minutos = parseInt(match[3] || '0');
+          return dias * 24 * 60 + horas * 60 + minutos;
         }
         return 0;
       });
-    
-    const promedioMin = duraciones.length ? 
-      Math.floor(duraciones.reduce((a,b)=>a+b,0)/duraciones.length) : 0;
-    const promHoras = Math.floor(promedioMin / 60);
-    const promMin = promedioMin % 60;
-    this.tiempoPromedio = duraciones.length ? `${promHoras}h ${promMin}m` : '-';
+      
+      const promedioMin = Math.floor(
+        duraciones.reduce((a, b) => a + b, 0) / duraciones.length
+      );
+      
+      const promHoras = Math.floor(promedioMin / 60);
+      const promMin = promedioMin % 60;
+      
+      this.tiempoPromedio = promHoras > 0 
+        ? `${promHoras}h ${promMin}m` 
+        : `${promMin}m`;
+    } else {
+      this.tiempoPromedio = '-';
+    }
 
-    this.porcentajeOcupacion = Math.round((this.vehiculosActivos / this.totalEspacios) * 100);
+    this.porcentajeOcupacion = Math.round(
+      (this.vehiculosActivos / this.totalEspacios) * 100
+    );
     
     console.log('📊 Estadísticas:', {
       hoy: this.vehiculosHoy,
       activos: this.vehiculosActivos,
       libres: this.espaciosLibres,
-      ocupados: this.espaciosOcupados
+      ocupados: this.espaciosOcupados,
+      promedio: this.tiempoPromedio,
+      ocupacion: this.porcentajeOcupacion + '%'
     });
   }
 
@@ -212,9 +344,9 @@ export class Vehiculos implements OnInit {
       localStorage.removeItem('loginTime');
       
       console.log('🧹 localStorage limpiado');
-      console.log('🔄 Navegando a /inicio...');
+      console.log('🔄 Navegando a /login...');
       
-      this.router.navigate(['/inicio'], { replaceUrl: true }).then(
+      this.router.navigate(['/login'], { replaceUrl: true }).then(
         (success) => {
           console.log('✅ Navegación exitosa:', success);
         },
@@ -245,16 +377,25 @@ export class Vehiculos implements OnInit {
     const mensajeDiv = document.getElementById('mensaje');
     if (mensajeDiv) {
       mensajeDiv.textContent = texto;
-      mensajeDiv.className = `mensaje ${tipo}`;
+      mensajeDiv.className = `mensaje ${tipo === 'success' ? 'exito' : 'error'}`;
       mensajeDiv.style.display = 'block';
 
       setTimeout(() => {
         mensajeDiv.style.display = 'none';
-      }, 3000);
+      }, 4000);
     }
   }
 
   formatearFecha(fecha: string): string {
-    return new Date(fecha).toLocaleString('es-PE');
+    const date = new Date(fecha);
+    return date.toLocaleString('es-PE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
   }
 }
