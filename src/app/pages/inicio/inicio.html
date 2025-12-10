@@ -5,12 +5,15 @@
     <a routerLink="/inicio" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
     <a routerLink="/historial" routerLinkActive="active-link">Historial</a>
     <a routerLink="/estadisticas" routerLinkActive="active-link">Estadísticas</a>
-    <button class="btn-admin" (click)="goToLogin()">🔐 Acceso Admin</button>
+    <button class="btn-admin" (click)="goToLogin()">
+      {{ usuarioAutenticado ? '🚗 Panel Admin' : '🔐 Acceso Admin' }}
+    </button>
   </nav>
 </header>
 
 <!-- CONTENIDO -->
 <main>
+  <!-- HERO SECTION -->
   <div class="hero-section">
     <h2>
       Bienvenido al ZavalaTech Parking
@@ -22,11 +25,24 @@
     </p>
   </div>
 
-  <div class="status-section">
+  <!-- ESTADO DE CARGA -->
+  <div *ngIf="cargando" class="loading">
+    <div class="loading-spinner"></div>
+    <p>Cargando...</p>
+  </div>
+
+  <!-- ERROR -->
+  <div *ngIf="error && !cargando" class="error">
+    <p>⚠️ {{ error }}</p>
+    <button class="btn-refresh" (click)="actualizarEstado()">🔄 Reintentar</button>
+  </div>
+
+  <!-- ESTADO EN TIEMPO REAL -->
+  <div *ngIf="!cargando && !error" class="status-section">
     <div class="status-header">
       <h3 class="status-title">🅿️ Disponibilidad en Tiempo Real</h3>
 
-      <div style="display: flex; gap: 1rem; align-items: center;">
+      <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <div class="status-indicators">
           <div class="indicator disponibles">
             🟢 <span class="indicator-value">{{ libres }}</span> Libres
@@ -45,28 +61,55 @@
       </div>
     </div>
 
+    <!-- BARRA DE PROGRESO -->
+    <div class="progress-container">
+      <div class="progress-label">
+        <span>Ocupación del estacionamiento</span>
+        <span><strong>{{ porcentajeOcupacion }}%</strong></span>
+      </div>
+      <div class="progress-bar">
+        <div 
+          class="progress-fill"
+          [ngClass]="{
+            'high': porcentajeOcupacion >= 80,
+            'medium': porcentajeOcupacion >= 50 && porcentajeOcupacion < 80
+          }"
+          [style.width.%]="porcentajeOcupacion"
+        >
+          <span *ngIf="porcentajeOcupacion > 10">{{ porcentajeOcupacion }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID DE ESPACIOS -->
     <div class="spaces-grid">
       <div
         *ngFor="let espacio of espacios"
         [ngClass]="espacio.ocupado ? 'space-card ocupado' : 'space-card libre'"
         (click)="espacio.ocupado ? mostrarInfoEspacio(espacio.vehiculo) : null"
+        [title]="espacio.ocupado ? 'Click para ver detalles' : 'Espacio disponible'"
       >
         <div class="space-number">E-{{ espacio.numero | number:'2.0' }}</div>
         <div class="space-label">{{ espacio.ocupado ? 'Ocupado' : 'Libre' }}</div>
 
-        <div class="space-info" *ngIf="espacio.ocupado">
-          {{ espacio.vehiculo.tipo }}
+        <div class="space-info" *ngIf="espacio.ocupado && espacio.vehiculo">
+          {{ espacio.vehiculo.placa }}
         </div>
       </div>
     </div>
 
+    <!-- MENSAJE SI NO HAY ESPACIOS -->
+    <div *ngIf="espacios.length === 0" style="text-align: center; padding: 2rem; color: #cbd5e1;">
+      <p>⏳ Inicializando espacios del estacionamiento...</p>
+    </div>
+
     <div class="update-time">
-      Última actualización: {{ horaActual }}
+      🕐 Última actualización: {{ horaActual }}
     </div>
   </div>
 
   <!-- INFO EXTRA -->
-  <div class="info-section">
+  <div *ngIf="!cargando && !error" class="info-section">
     <div class="info-grid">
 
       <div class="info-card">

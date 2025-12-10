@@ -1,17 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-
-interface Vehiculo {
-  espacio?: number;
-  columna?: string;
-  placa: string;
-  propietario: string;
-  tipo: string;
-  horaEntrada: Date;
-  horaSalida?: Date;
-}
+import { Subject, takeUntil } from 'rxjs';
+import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
+import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio'; 
+import { Vehiculo } from '../../compartido/modelos/vehiculo.modelo';
 
 @Component({
   selector: 'app-historial',
@@ -20,7 +14,12 @@ interface Vehiculo {
   templateUrl: './historial.html',
   styleUrls: ['./historial.css']
 })
-export class Historial implements OnInit {
+export class Historial implements OnInit, OnDestroy {
+  private vehiculosServicio = inject(VehiculosServicio);
+  private authServicio = inject(AutenticacionServicio);
+  private router = inject(Router);
+  private destroy$ = new Subject<void>();
+
   vehiculos: Vehiculo[] = [];
   vehiculosFiltrados: Vehiculo[] = [];
 
@@ -36,45 +35,95 @@ export class Historial implements OnInit {
   filtroTipo = '';
   filtroFecha = '';
 
-  constructor(private router: Router) {}
+  // Estados
+  cargando = true;
+  error = '';
+  usuarioAutenticado = false;
 
   ngOnInit(): void {
-    console.log('📋 Historial component cargado');
-    this.cargarVehiculos();
-    this.actualizarEstadisticas();
-    this.actualizarTabla();
+    console.log('📋 Historial component cargado con Firebase');
+    this.verificarAutenticacion();
+    this.cargarVehiculosDesdeFirebase();
   }
 
-  cargarVehiculos(): void {
-    const stored = localStorage.getItem('vehiculos');
-    if (stored) {
-      this.vehiculos = JSON.parse(stored).map((v: any) => ({
-        ...v,
-        horaEntrada: new Date(v.horaEntrada),
-        horaSalida: v.horaSalida ? new Date(v.horaSalida) : undefined
-      }));
-    }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  actualizarEstadisticas(): void {
+  /**
+   * Verifica si hay un usuario autenticado
+   */
+  private verificarAutenticacion(): void {
+    this.authServicio.user$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.usuarioAutenticado = !!user;
+      });
+  }
+
+  /**
+   * Carga vehículos desde Firebase en tiempo real
+   * CAMBIADO A PUBLIC para poder ser llamado desde el template
+   */
+  cargarVehiculosDesdeFirebase(): void {
+    console.log('🔄 Iniciando carga de vehículos...');
+    this.cargando = true;
+    this.error = '';
+    
+    this.vehiculosServicio.obtenerVehiculos()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (vehiculos: Vehiculo[]) => {
+          console.log('✅ Datos recibidos de Firebase:', vehiculos);
+          this.vehiculos = vehiculos;
+          this.cargando = false;
+          this.error = '';
+          console.log('🚗 Vehículos cargados exitosamente:', vehiculos.length);
+          
+          this.actualizarEstadisticas();
+          this.actualizarTabla();
+        },
+        error: (err: any) => {
+          console.error('❌ Error completo:', err);
+          console.error('❌ Error mensaje:', err.message);
+          console.error('❌ Error stack:', err.stack);
+          this.error = `Error al cargar el historial: ${err.message || 'Error desconocido'}`;
+          this.cargando = false;
+        }
+      });
+  }
+
+  /**
+   * Actualiza las estadísticas del historial
+   */
+  private actualizarEstadisticas(): void {
     this.totalRegistros = this.vehiculos.length;
 
     // Registros de hoy
-    const hoy = new Date().toDateString();
-    this.registrosHoy = this.vehiculos.filter(v => 
-      v.horaEntrada.toDateString() === hoy
-    ).length;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    this.registrosHoy = this.vehiculos.filter(v => {
+      const entrada = this.convertirADate(v.horaEntrada);
+      entrada.setHours(0, 0, 0, 0);
+      return entrada.getTime() === hoy.getTime();
+    }).length;
 
     // Tiempo promedio
     const conSalida = this.vehiculos.filter(v => v.horaSalida);
     if (conSalida.length > 0) {
       const tiempoTotal = conSalida.reduce((sum, v) => {
-        return sum + (v.horaSalida!.getTime() - v.horaEntrada.getTime());
+        const entrada = this.convertirADate(v.horaEntrada);
+        const salida = this.convertirADate(v.horaSalida!);
+        return sum + (salida.getTime() - entrada.getTime());
       }, 0);
       const promedioMin = Math.floor((tiempoTotal / conSalida.length) / 60000);
       const horas = Math.floor(promedioMin / 60);
       const minutos = promedioMin % 60;
       this.tiempoPromedio = horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m`;
+    } else {
+      this.tiempoPromedio = '-';
     }
 
     // Tipo más común
@@ -86,9 +135,14 @@ export class Historial implements OnInit {
       this.tipoComun = Object.keys(tipos).reduce((a, b) => 
         tipos[a] > tipos[b] ? a : b
       );
+    } else {
+      this.tipoComun = '-';
     }
   }
 
+  /**
+   * Actualiza la tabla con los filtros aplicados
+   */
   actualizarTabla(): void {
     const busquedaPlaca = this.filtroPlaca.trim().toUpperCase();
     const busquedaPropietario = this.filtroPropietario.trim().toUpperCase();
@@ -98,22 +152,62 @@ export class Historial implements OnInit {
       const cumplePropietario = !busquedaPropietario || 
         v.propietario.toUpperCase().includes(busquedaPropietario);
       const cumpleTipo = !this.filtroTipo || v.tipo === this.filtroTipo;
-      const cumpleFecha = !this.filtroFecha || 
-        v.horaEntrada.toISOString().split('T')[0] === this.filtroFecha;
+      
+      // Filtro de fecha
+      let cumpleFecha = true;
+      if (this.filtroFecha) {
+        const entrada = this.convertirADate(v.horaEntrada);
+        const fechaEntrada = entrada.toISOString().split('T')[0];
+        cumpleFecha = fechaEntrada === this.filtroFecha;
+      }
       
       return cumplePlaca && cumplePropietario && cumpleTipo && cumpleFecha;
     });
 
     // Ordenar por fecha más reciente
-    this.vehiculosFiltrados.sort((a, b) => 
-      b.horaEntrada.getTime() - a.horaEntrada.getTime()
-    );
+    this.vehiculosFiltrados.sort((a, b) => {
+      const fechaA = this.convertirADate(a.horaEntrada);
+      const fechaB = this.convertirADate(b.horaEntrada);
+      return fechaB.getTime() - fechaA.getTime();
+    });
+
+    console.log('🔍 Filtros aplicados. Resultados:', this.vehiculosFiltrados.length);
   }
 
-  calcularTiempo(entrada: Date, salida?: Date): string {
+  /**
+   * Convierte un Timestamp de Firebase o Date a Date
+   */
+  private convertirADate(fecha: any): Date {
+    if (!fecha) return new Date();
+    // Si tiene el método toDate, es un Timestamp de Firebase
+    if (fecha.toDate && typeof fecha.toDate === 'function') {
+      return fecha.toDate();
+    }
+    // Si ya es un Date, lo retorna
+    if (fecha instanceof Date) {
+      return fecha;
+    }
+    // Intenta convertirlo
+    return new Date(fecha);
+  }
+
+  /**
+   * Obtiene la fecha formateada para el template
+   */
+  obtenerFecha(fecha: any): Date {
+    return this.convertirADate(fecha);
+  }
+
+  /**
+   * Calcula el tiempo transcurrido entre entrada y salida
+   */
+  calcularTiempo(entrada: any, salida?: any): string {
     if (!salida) return '-';
     
-    const segundos = Math.floor((salida.getTime() - entrada.getTime()) / 1000);
+    const fechaEntrada = this.convertirADate(entrada);
+    const fechaSalida = this.convertirADate(salida);
+    
+    const segundos = Math.floor((fechaSalida.getTime() - fechaEntrada.getTime()) / 1000);
     const minutos = Math.floor(segundos / 60);
     const horas = Math.floor(minutos / 60);
     const dias = Math.floor(horas / 24);
@@ -131,35 +225,53 @@ export class Historial implements OnInit {
     }
   }
 
+  /**
+   * Exporta el historial a CSV
+   */
   exportarCSV(): void {
     if (this.vehiculos.length === 0) {
-      alert('No hay datos para exportar');
+      alert('⚠️ No hay datos para exportar');
       return;
     }
 
-    let csv = 'Espacio,Columna,Placa,Propietario,Tipo,Fecha,Hora Entrada,Hora Salida,Tiempo Total\n';
+    let csv = 'Espacio,Placa,Propietario,Tipo,Fecha,Hora Entrada,Hora Salida,Tiempo Total\n';
     
     this.vehiculos.forEach(v => {
-      const fechaEntrada = v.horaEntrada.toLocaleDateString('es-PE');
-      const horaEntrada = v.horaEntrada.toLocaleTimeString('es-PE');
-      const horaSalida = v.horaSalida ? 
-        v.horaSalida.toLocaleTimeString('es-PE') : '-';
-      const tiempoTotal = this.calcularTiempo(v.horaEntrada, v.horaSalida);
+      const entrada = this.convertirADate(v.horaEntrada);
+      const fechaEntrada = entrada.toLocaleDateString('es-PE');
+      const horaEntrada = entrada.toLocaleTimeString('es-PE');
       
-      csv += `E-${String(v.espacio || '-').padStart(2, '0')},${v.columna || '-'},${v.placa},${v.propietario},${v.tipo},${fechaEntrada},${horaEntrada},${horaSalida},${tiempoTotal}\n`;
+      let horaSalida = '-';
+      if (v.horaSalida) {
+        const salida = this.convertirADate(v.horaSalida);
+        horaSalida = salida.toLocaleTimeString('es-PE');
+      }
+      
+      const tiempoTotal = this.calcularTiempo(v.horaEntrada, v.horaSalida);
+      const espacio = v.espacioNumero ? `E-${String(v.espacioNumero).padStart(2, '0')}` : '-';
+      
+      csv += `${espacio},${v.placa},${v.propietario},${v.tipo},${fechaEntrada},${horaEntrada},${horaSalida},${tiempoTotal}\n`;
     });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `historial_zavalaTech_${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+    
+    console.log('📥 CSV exportado correctamente');
   }
 
-  goToLogin() {
-    console.log('🔐 Navegando a login...');
-    this.router.navigate(['/login']);
+  /**
+   * Navega a la página de login o panel admin
+   */
+  goToLogin(): void {
+    if (this.usuarioAutenticado) {
+      this.router.navigate(['/vehiculos']);
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 }

@@ -3,7 +3,7 @@ import { Auth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPasswo
 import { Firestore, doc, setDoc, getDoc } from '@angular/fire/firestore';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { Usuario, RolUsuario } from '../../compartido/modelos/usuario.modelo';
+import { Usuario, RolUsuario } from '../modelos/usuario.modelo';
 
 @Injectable({
   providedIn: 'root'

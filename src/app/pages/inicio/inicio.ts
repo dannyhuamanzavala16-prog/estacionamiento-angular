@@ -1,6 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+import { EspaciosServicio } from '../../compartido/servicios/espacios.servicio';
+import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
+import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio'; 
+import { EstadoEstacionamiento } from '../../compartido/modelos/espacio.modelo';
 
 @Component({
   selector: 'app-inicio',
@@ -9,83 +14,177 @@ import { Router, RouterModule } from '@angular/router';
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css']
 })
-export class InicioComponent {
+export class InicioComponent implements OnInit, OnDestroy {
+  private espaciosServicio = inject(EspaciosServicio);
+  private vehiculosServicio = inject(VehiculosServicio);
+  private authServicio = inject(AutenticacionServicio);
+  private router = inject(Router);
+  private destroy$ = new Subject<void>();
 
-  TOTAL_ESPACIOS = 20;
-
-  libres = 20;
+  // Estado del estacionamiento
+  libres = 0;
   ocupados = 0;
-  total = 20;
+  total = 0;
+  porcentajeOcupacion = 0;
 
-  horaActual = 'Cargando...';
-
+  // Espacios con información
   espacios: any[] = [];
 
-  constructor(private router: Router) {}
+  // Información de actualización
+  horaActual = '';
+  cargando = true;
+  error = '';
 
-  ngOnInit() {
-    console.log('🏠 Inicio component cargado');
-    this.actualizarEstado();
-    setInterval(() => this.actualizarEstado(), 30000);
+  // Usuario autenticado
+  usuarioAutenticado = false;
+
+  ngOnInit(): void {
+    console.log('🏠 Inicio component cargado con Firebase');
+    this.verificarAutenticacion();
+    this.cargarDatosEnTiempoReal();
+    this.actualizarHora();
+    
+    // Actualizar hora cada segundo
+    setInterval(() => this.actualizarHora(), 1000);
   }
 
-  actualizarEstado() {
-    const vehiculos = JSON.parse(localStorage.getItem('vehiculos') ?? '[]');
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
-    const ocupadosSet = new Set<number>();
-
-    vehiculos.forEach((v: any) => {
-      if (v.estado === 'activo' && v.espacio) {
-        ocupadosSet.add(v.espacio);
-      }
-    });
-
-    this.ocupados = ocupadosSet.size;
-    this.libres = this.TOTAL_ESPACIOS - this.ocupados;
-    this.total = this.TOTAL_ESPACIOS;
-
-    this.espacios = [];
-
-    for (let i = 1; i <= this.TOTAL_ESPACIOS; i++) {
-      const ocupado = ocupadosSet.has(i);
-      const vehiculo = vehiculos.find((v: any) => v.espacio === i && v.estado === 'activo');
-
-      this.espacios.push({
-        numero: i,
-        ocupado,
-        vehiculo
+  /**
+   * Verifica si hay un usuario autenticado
+   */
+  private verificarAutenticacion(): void {
+    this.authServicio.user$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.usuarioAutenticado = !!user;
       });
-    }
-
-    this.horaActual = new Date().toLocaleTimeString('es-PE');
   }
 
-  mostrarInfoEspacio(vehiculo: any) {
-    const entrada = new Date(vehiculo.horaEntrada);
-    const ahora = new Date();
+  /**
+   * Carga los datos en tiempo real desde Firestore
+   */
+  private cargarDatosEnTiempoReal(): void {
+    // Suscribirse al estado general
+    this.espaciosServicio.obtenerEstadoEstacionamiento()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (estado: EstadoEstacionamiento) => {
+          this.total = estado.espaciosTotales;
+          this.ocupados = estado.espaciosOcupados;
+          this.libres = estado.espaciosLibres;
+          this.porcentajeOcupacion = estado.porcentajeOcupacion;
+          this.cargando = false;
+          this.error = '';
+          console.log('📊 Estado actualizado:', estado);
+        },
+        error: (err) => {
+          console.error('❌ Error al cargar estado:', err);
+          this.error = 'Error al cargar el estado del estacionamiento';
+          this.cargando = false;
+        }
+      });
 
-    alert(`
-📍 Espacio E-${String(vehiculo.espacio).padStart(2, '0')}
+    // Suscribirse a los espacios con vehículos
+    this.espaciosServicio.obtenerEspaciosConVehiculos()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (espacios) => {
+          this.espacios = espacios;
+          console.log('🅿️ Espacios actualizados:', espacios.length);
+        },
+        error: (err) => {
+          console.error('❌ Error al cargar espacios:', err);
+          this.error = 'Error al cargar los espacios';
+        }
+      });
+  }
+
+  /**
+   * Actualiza la hora actual
+   */
+  private actualizarHora(): void {
+    const ahora = new Date();
+    this.horaActual = ahora.toLocaleString('es-PE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  /**
+   * Fuerza actualización manual
+   */
+  actualizarEstado(): void {
+    console.log('🔄 Actualizando estado manualmente...');
+    this.cargando = true;
+    
+    // La suscripción en tiempo real ya maneja la actualización
+    setTimeout(() => {
+      this.cargando = false;
+    }, 500);
+  }
+
+  /**
+   * Muestra información detallada de un espacio ocupado
+   */
+  mostrarInfoEspacio(vehiculo: any): void {
+    if (!vehiculo) return;
+
+    const entrada = vehiculo.horaEntrada?.toDate ? vehiculo.horaEntrada.toDate() : new Date(vehiculo.horaEntrada);
+    const ahora = new Date();
+    const tiempoTranscurrido = this.calcularTiempo(entrada, ahora);
+
+    const mensaje = `
+🚗 INFORMACIÓN DEL ESPACIO E-${String(vehiculo.espacioNumero).padStart(2, '0')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 Placa: ${vehiculo.placa}
 🚙 Tipo: ${vehiculo.tipo}
 👤 Propietario: ${vehiculo.propietario}
-🕐 Entrada: ${entrada.toLocaleTimeString('es-PE')}
-⏱️ Tiempo dentro: ${this.calcularTiempo(entrada, ahora)}
-    `);
+🕐 Hora de entrada: ${entrada.toLocaleTimeString('es-PE')}
+⏱️ Tiempo estacionado: ${tiempoTranscurrido}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `.trim();
+
+    alert(mensaje);
   }
 
-  calcularTiempo(entrada: Date, salida: Date) {
-    const segundos = Math.floor((salida.getTime() - entrada.getTime()) / 1000);
+  /**
+   * Calcula el tiempo transcurrido entre dos fechas
+   */
+  private calcularTiempo(entrada: Date, salida: Date): string {
+    const milisegundos = salida.getTime() - entrada.getTime();
+    const segundos = Math.floor(milisegundos / 1000);
     const minutos = Math.floor(segundos / 60);
     const horas = Math.floor(minutos / 60);
+    const dias = Math.floor(horas / 24);
 
-    if (horas > 0) return `${horas}h ${minutos % 60}m`;
-    if (minutos > 0) return `${minutos}m`;
-
+    if (dias > 0) {
+      return `${dias}d ${horas % 24}h ${minutos % 60}m`;
+    }
+    if (horas > 0) {
+      return `${horas}h ${minutos % 60}m`;
+    }
+    if (minutos > 0) {
+      return `${minutos}m ${segundos % 60}s`;
+    }
     return `${segundos}s`;
   }
 
-  goToLogin() {
-    console.log('🔐 Navegando a login...');
-    this.router.navigate(['/login']);
+  /**
+   * Navega a la página de login
+   */
+  goToLogin(): void {
+    if (this.usuarioAutenticado) {
+      this.router.navigate(['/vehiculos']);
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 }

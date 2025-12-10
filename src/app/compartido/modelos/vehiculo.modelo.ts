@@ -2,17 +2,19 @@ export interface Vehiculo {
   id?: string;
   placa: string;
   propietario: string;
-  horaEntrada: Date;
-  horaSalida?: Date;
-  tipo: TipoVehiculo;
-  estado: EstadoVehiculo;
+  horaEntrada: any; 
+  horaSalida?: any; 
+  tipo: string; 
+  estado: string; 
+  espacioNumero?: number; // Número del espacio asignado
 }
 
 export enum TipoVehiculo {
   AUTO = 'Auto',
   MOTO = 'Moto',
   CAMIONETA = 'Camioneta',
-  CAMION = 'Camión'
+  CAMION = 'Camión',
+  SUV = 'SUV'
 }
 
 export enum EstadoVehiculo {
