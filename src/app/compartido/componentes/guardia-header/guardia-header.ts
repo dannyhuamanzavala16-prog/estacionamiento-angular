@@ -4,24 +4,24 @@ import { Router } from '@angular/router';
 import { AutenticacionServicio } from '../../servicios/autenticacion.servicio';
 
 @Component({
-  selector: 'app-admin-header',
+  selector: 'app-guardia-header',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './admin-header.html',
-  styleUrl: './admin-header.css'
+  templateUrl: './guardia-header.html',
+  styleUrl: './guardia-header.css'
 })
-export class AdminHeaderComponent implements OnInit {
+export class GuardiaHeaderComponent implements OnInit {
   private router = inject(Router);
   private authServicio = inject(AutenticacionServicio);
 
-  nombreAdmin = 'Admin';
+  nombreGuardia = 'Guardia';
   rutaActual = '';
 
   ngOnInit(): void {
-    // Obtener nombre del admin
+    // Obtener nombre del guardia
     const email = this.authServicio.obtenerEmailUsuario();
     if (email) {
-      this.nombreAdmin = email.split('@')[0];
+      this.nombreGuardia = email.split('@')[0];
     }
 
     // Actualizar ruta actual

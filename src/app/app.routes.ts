@@ -4,7 +4,7 @@ import { Historial } from './pages/historial/historial';
 import { Estadisticas } from './pages/estadisticas/estadisticas';
 import { Login } from './pages/login/login';
 import { Vehiculos } from './pages/vehiculos/vehiculos';
-import { authGuard } from './nucleo/guardias/auth-guard';
+import { Buscar } from './pages/buscar/buscar';
 
 export const routes: Routes = [
   // Ruta raíz redirige a inicio
@@ -39,6 +39,11 @@ export const routes: Routes = [
     path: 'vehiculos', 
     component: Vehiculos, 
     title: 'Vehículos'
+  },
+  { 
+    path: 'buscar', 
+    component: Buscar, 
+    title: 'Buscar Vehículo'
   },
   
   // Ruta por defecto

@@ -1,0 +1,133 @@
+<!-- HEADER COMPARTIDO GUARDIA -->
+<app-guardia-header></app-guardia-header>
+
+<main>
+  
+  <!-- ESTADO DE CARGA -->
+  <div *ngIf="cargando" class="loading">
+    <div class="loading-spinner"></div>
+    <p>Buscando vehículo...</p>
+  </div>
+
+  <!-- ERROR -->
+  <div *ngIf="error && !cargando" class="error">
+    <p>⚠️ {{ error }}</p>
+    <button class="btn-filter" (click)="limpiarBusqueda()">🔄 Limpiar</button>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <ng-container *ngIf="!cargando && !error">
+    <!-- ENCABEZADO -->
+    <div class="header-section">
+      <h2>🔍 Buscar Vehículo por Placa</h2>
+      <p class="subtitle">
+        Ingresa la placa del vehículo para ver su información actual y verificar si está en el estacionamiento.
+      </p>
+    </div>
+
+    <!-- FORMULARIO DE BÚSQUEDA -->
+    <div class="search-section">
+      <div class="search-container">
+        <div class="search-input-group">
+          <label for="searchPlaca">🚗 Placa del Vehículo</label>
+          <input 
+            type="text" 
+            id="searchPlaca" 
+            placeholder="Ej: ABC-123"
+            [(ngModel)]="placaBusqueda"
+            (keyup.enter)="buscarVehiculo()"
+            maxlength="10">
+        </div>
+        <button class="btn-search" (click)="buscarVehiculo()" [disabled]="!placaBusqueda.trim()">
+          🔍 Buscar
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULTADO DE BÚSQUEDA -->
+    <div *ngIf="vehiculoEncontrado" class="result-section">
+      <div class="result-card success">
+        <div class="result-header">
+          <span class="result-icon">✅</span>
+          <h3>Vehículo Encontrado</h3>
+        </div>
+        
+        <div class="result-body">
+          <div class="result-row">
+            <span class="result-label">🅿️ Espacio:</span>
+            <span class="result-value highlight">E-{{ vehiculoEncontrado!.espacioNumero! < 10 ? '0' + vehiculoEncontrado!.espacioNumero : vehiculoEncontrado!.espacioNumero }}</span>
+          </div>
+          
+          <div class="result-row">
+            <span class="result-label">🚗 Placa:</span>
+            <span class="result-value placa-badge">{{ vehiculoEncontrado!.placa }}</span>
+          </div>
+          
+          <div class="result-row">
+            <span class="result-label">👤 Propietario:</span>
+            <span class="result-value">{{ vehiculoEncontrado!.propietario }}</span>
+          </div>
+          
+          <div class="result-row">
+            <span class="result-label">🚙 Tipo:</span>
+            <span class="result-value">{{ vehiculoEncontrado!.tipo }}</span>
+          </div>
+          
+          <div class="result-row">
+            <span class="result-label">🕐 Hora Entrada:</span>
+            <span class="result-value">{{ formatearFecha(vehiculoEncontrado!.horaEntrada) }}</span>
+          </div>
+          
+          <div class="result-row">
+            <span class="result-label">⏱️ Tiempo Estacionado:</span>
+            <span class="result-value">{{ calcularTiempoActual(vehiculoEncontrado!.horaEntrada) }}</span>
+          </div>
+          
+          <div class="result-row">
+            <span class="result-label">📊 Estado:</span>
+            <span class="badge-activo">DENTRO DEL ESTACIONAMIENTO</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VEHÍCULO NO ENCONTRADO -->
+    <div *ngIf="busquedaRealizada && !vehiculoEncontrado" class="result-section">
+      <div class="result-card warning">
+        <div class="result-header">
+          <span class="result-icon">⚠️</span>
+          <h3>Vehículo No Encontrado</h3>
+        </div>
+        
+        <div class="result-body">
+          <p class="not-found-message">
+            No se encontró ningún vehículo con la placa <strong>{{ placaBuscada }}</strong> dentro del estacionamiento.
+          </p>
+          <p class="not-found-help">
+            • Verifica que la placa esté escrita correctamente<br>
+            • El vehículo podría no estar registrado<br>
+            • El vehículo podría haber salido del estacionamiento
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORIAL DE BÚSQUEDAS RECIENTES -->
+    <div *ngIf="historialBusquedas.length > 0" class="history-section">
+      <h3>📋 Búsquedas Recientes</h3>
+      <div class="history-list">
+        <div 
+          *ngFor="let busqueda of historialBusquedas" 
+          class="history-item"
+          (click)="buscarDesdeHistorial(busqueda.placa)">
+          <span class="history-placa">{{ busqueda.placa }}</span>
+          <span class="history-time">{{ busqueda.fecha }}</span>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</main>
+
+<!-- FOOTER COMPARTIDO -->
+<app-footer></app-footer>
