@@ -1,13 +1,15 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, NgZone } from '@angular/core';
 import { 
   Firestore, 
   collection, 
   doc, 
   setDoc, 
   getDoc, 
-  collectionData,
   query,
-  where
+  where,
+  onSnapshot,
+  getDocs,
+  Unsubscribe
 } from '@angular/fire/firestore';
 import { Observable, combineLatest, map } from 'rxjs';
 import { Espacio, EstadoEstacionamiento } from '../modelos/espacio.modelo';
@@ -18,6 +20,7 @@ import { Vehiculo, EstadoVehiculo } from '../modelos/vehiculo.modelo';
 })
 export class EspaciosServicio {
   private firestore = inject(Firestore);
+  private ngZone = inject(NgZone);
   private coleccionEspacios = collection(this.firestore, 'espacios');
   private coleccionVehiculos = collection(this.firestore, 'vehiculos');
 
@@ -62,14 +65,76 @@ export class EspaciosServicio {
 
   /**
    * Obtiene todos los espacios en tiempo real con información de vehículos
+   * CORREGIDO: Usa NgZone para evitar warnings
    */
   obtenerEspaciosConVehiculos(): Observable<any[]> {
-    const espacios$ = collectionData(this.coleccionEspacios, { idField: 'id' }) as Observable<Espacio[]>;
+    const espacios$ = new Observable<Espacio[]>(observer => {
+      let unsubscribe: Unsubscribe;
+      
+      this.ngZone.runOutsideAngular(() => {
+        unsubscribe = onSnapshot(
+          this.coleccionEspacios,
+          (snapshot) => {
+            const espacios = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            } as Espacio));
+            
+            this.ngZone.run(() => {
+              observer.next(espacios);
+            });
+          },
+          (error) => {
+            this.ngZone.run(() => {
+              observer.error(error);
+            });
+          }
+        );
+      });
+      
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    });
     
-    const vehiculosDentro$ = collectionData(
-      query(this.coleccionVehiculos, where('estado', '==', EstadoVehiculo.DENTRO)),
-      { idField: 'id' }
-    ) as Observable<Vehiculo[]>;
+    const vehiculosDentro$ = new Observable<Vehiculo[]>(observer => {
+      const q = query(this.coleccionVehiculos, where('estado', '==', EstadoVehiculo.DENTRO));
+      let unsubscribe: Unsubscribe;
+      
+      this.ngZone.runOutsideAngular(() => {
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const vehiculos = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+                horaSalida: data['horaSalida']?.toDate()
+              } as Vehiculo;
+            });
+            
+            this.ngZone.run(() => {
+              observer.next(vehiculos);
+            });
+          },
+          (error) => {
+            this.ngZone.run(() => {
+              observer.error(error);
+            });
+          }
+        );
+      });
+      
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    });
 
     return combineLatest([espacios$, vehiculosDentro$]).pipe(
       map(([espacios, vehiculos]) => {
@@ -174,19 +239,19 @@ export class EspaciosServicio {
    */
   async obtenerEspaciosLibres(tipo?: string): Promise<Espacio[]> {
     try {
-      const espacios$ = collectionData(this.coleccionEspacios) as Observable<Espacio[]>;
+      const snapshot = await getDocs(this.coleccionEspacios);
+      let espacios = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Espacio));
       
-      return new Promise((resolve) => {
-        espacios$.subscribe(espacios => {
-          let espaciosLibres = espacios.filter(e => !e.ocupado);
-          
-          if (tipo) {
-            espaciosLibres = espaciosLibres.filter(e => e.tipo === tipo);
-          }
-          
-          resolve(espaciosLibres.sort((a, b) => a.numero - b.numero));
-        });
-      });
+      let espaciosLibres = espacios.filter(e => !e.ocupado);
+      
+      if (tipo) {
+        espaciosLibres = espaciosLibres.filter(e => e.tipo === tipo);
+      }
+      
+      return espaciosLibres.sort((a, b) => a.numero - b.numero);
     } catch (error) {
       console.error('Error al obtener espacios libres:', error);
       return [];

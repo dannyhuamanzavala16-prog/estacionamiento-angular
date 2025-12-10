@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, NgZone } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -9,8 +9,9 @@ import {
   query, 
   where, 
   orderBy, 
-  Timestamp, 
-  collectionData 
+  Timestamp,
+  onSnapshot,
+  Unsubscribe
 } from '@angular/fire/firestore';
 import { Vehiculo, TipoVehiculo, EstadoVehiculo } from '../modelos/vehiculo.modelo';
 import { Observable } from 'rxjs';
@@ -22,20 +23,63 @@ import { EspaciosServicio } from './espacios.servicio';
 export class VehiculosServicio {
   private firestore = inject(Firestore);
   private espaciosServicio = inject(EspaciosServicio);
+  private ngZone = inject(NgZone);
   private coleccion = collection(this.firestore, 'vehiculos');
 
   /**
    * Obtiene TODOS los vehículos en tiempo real (para historial)
+   * SOLUCIÓN DEFINITIVA: Ejecuta onSnapshot dentro de NgZone
    */
   obtenerVehiculos(): Observable<Vehiculo[]> {
     console.log('🔍 Consultando vehículos en Firestore...');
     
-    const q = query(
-      this.coleccion,
-      orderBy('horaEntrada', 'desc')
-    );
-    
-    return collectionData(q, { idField: 'id' }) as Observable<Vehiculo[]>;
+    return new Observable(observer => {
+      const q = query(
+        this.coleccion,
+        orderBy('horaEntrada', 'desc')
+      );
+
+      let unsubscribe: Unsubscribe;
+
+      // Ejecutar dentro de NgZone para evitar el warning
+      this.ngZone.runOutsideAngular(() => {
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            console.log('📦 Snapshot recibido, documentos:', snapshot.size);
+            const vehiculos = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+                horaSalida: data['horaSalida']?.toDate()
+              } as Vehiculo;
+            });
+            console.log('✅ Vehículos procesados:', vehiculos.length);
+            
+            // Volver a entrar en la zona de Angular para actualizar la UI
+            this.ngZone.run(() => {
+              observer.next(vehiculos);
+            });
+          },
+          (error) => {
+            console.error('❌ Error en snapshot:', error);
+            this.ngZone.run(() => {
+              observer.error(error);
+            });
+          }
+        );
+      });
+
+      // Cleanup cuando se desuscribe
+      return () => {
+        console.log('🔌 Desuscribiendo de vehículos');
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    });
   }
 
   /**
@@ -108,13 +152,47 @@ export class VehiculosServicio {
    * Obtiene vehículos que están actualmente dentro en tiempo real
    */
   obtenerVehiculosDentro(): Observable<Vehiculo[]> {
-    const q = query(
-      this.coleccion,
-      where('estado', '==', EstadoVehiculo.DENTRO),
-      orderBy('horaEntrada', 'desc')
-    );
-    
-    return collectionData(q, { idField: 'id' }) as Observable<Vehiculo[]>;
+    return new Observable(observer => {
+      const q = query(
+        this.coleccion,
+        where('estado', '==', EstadoVehiculo.DENTRO),
+        orderBy('horaEntrada', 'desc')
+      );
+
+      let unsubscribe: Unsubscribe;
+
+      this.ngZone.runOutsideAngular(() => {
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const vehiculos = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+                horaSalida: data['horaSalida']?.toDate()
+              } as Vehiculo;
+            });
+            
+            this.ngZone.run(() => {
+              observer.next(vehiculos);
+            });
+          },
+          (error) => {
+            this.ngZone.run(() => {
+              observer.error(error);
+            });
+          }
+        );
+      });
+
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    });
   }
 
   /**
@@ -128,12 +206,15 @@ export class VehiculosServicio {
         orderBy('horaEntrada', 'desc')
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        horaEntrada: doc.data()['horaEntrada'].toDate(),
-        horaSalida: doc.data()['horaSalida']?.toDate()
-      } as Vehiculo));
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+          horaSalida: data['horaSalida']?.toDate()
+        } as Vehiculo;
+      });
     } catch (error) {
       console.error('Error al obtener vehículos:', error);
       return [];

@@ -1,14 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-interface Vehiculo {
-  espacio?: number;
-  placa: string;
-  propietario: string;
-  tipo: string;
-  horaEntrada: Date;
-  horaSalida?: Date;
-}
+import { Router, RouterModule } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
+import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio';
+import { Vehiculo } from '../../compartido/modelos/vehiculo.modelo';
 
 interface TipoStats {
   tipo: string;
@@ -30,11 +26,16 @@ interface AnioData {
 @Component({
   selector: 'app-estadisticas',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './estadisticas.html',
   styleUrls: ['./estadisticas.css']
 })
-export class Estadisticas implements OnInit {
+export class Estadisticas implements OnInit, OnDestroy {
+  private vehiculosServicio = inject(VehiculosServicio);
+  private authServicio = inject(AutenticacionServicio);
+  private router = inject(Router);
+  private destroy$ = new Subject<void>();
+
   vehiculos: Vehiculo[] = [];
 
   // Estadísticas generales
@@ -62,44 +63,87 @@ export class Estadisticas implements OnInit {
   maxAnio = 1;
   datosTablasAnios: any[] = [];
 
+  // Estados
+  cargando = true;
+  usuarioAutenticado = false;
+
   ngOnInit(): void {
-    this.cargarVehiculos();
-    this.calcularEstadisticasGenerales();
-    this.calcularPorDiaSemana();
-    this.calcularPorMes();
-    this.calcularPorAnio();
+    console.log('📊 Estadísticas component cargado con Firebase');
+    this.verificarAutenticacion();
+    this.cargarVehiculosDesdeFirebase();
   }
 
-  cargarVehiculos(): void {
-    const stored = localStorage.getItem('vehiculos');
-    if (stored) {
-      this.vehiculos = JSON.parse(stored).map((v: any) => ({
-        ...v,
-        horaEntrada: new Date(v.horaEntrada),
-        horaSalida: v.horaSalida ? new Date(v.horaSalida) : undefined
-      }));
-    }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Verifica si hay un usuario autenticado
+   */
+  private verificarAutenticacion(): void {
+    this.authServicio.user$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.usuarioAutenticado = !!user;
+      });
+  }
+
+  /**
+   * Carga vehículos desde Firebase en tiempo real
+   */
+  private cargarVehiculosDesdeFirebase(): void {
+    console.log('🔄 Cargando vehículos desde Firebase para estadísticas...');
+    this.cargando = true;
+
+    this.vehiculosServicio.obtenerVehiculos()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (vehiculos: Vehiculo[]) => {
+          console.log('✅ Vehículos recibidos:', vehiculos.length);
+          this.vehiculos = vehiculos;
+          this.cargando = false;
+          
+          // Calcular todas las estadísticas
+          this.calcularEstadisticasGenerales();
+          this.calcularPorDiaSemana();
+          this.calcularPorMes();
+          this.calcularPorAnio();
+        },
+        error: (err: any) => {
+          console.error('❌ Error al cargar vehículos:', err);
+          this.cargando = false;
+        }
+      });
   }
 
   calcularEstadisticasGenerales(): void {
     this.totalVehiculos = this.vehiculos.length;
 
     // Vehículos hoy
-    const hoy = new Date().toDateString();
-    this.vehiculosHoy = this.vehiculos.filter(v => 
-      v.horaEntrada.toDateString() === hoy
-    ).length;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    this.vehiculosHoy = this.vehiculos.filter(v => {
+      const entrada = this.convertirADate(v.horaEntrada);
+      entrada.setHours(0, 0, 0, 0);
+      return entrada.getTime() === hoy.getTime();
+    }).length;
 
     // Tiempo promedio
     const conSalida = this.vehiculos.filter(v => v.horaSalida);
     if (conSalida.length > 0) {
       const tiempoTotal = conSalida.reduce((sum, v) => {
-        return sum + (v.horaSalida!.getTime() - v.horaEntrada.getTime());
+        const entrada = this.convertirADate(v.horaEntrada);
+        const salida = this.convertirADate(v.horaSalida!);
+        return sum + (salida.getTime() - entrada.getTime());
       }, 0);
       const promedioMin = Math.floor((tiempoTotal / conSalida.length) / 60000);
       const horas = Math.floor(promedioMin / 60);
       const minutos = promedioMin % 60;
       this.promedioTiempo = horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m`;
+    } else {
+      this.promedioTiempo = '-';
     }
 
     // Vehículos por tipo
@@ -117,7 +161,8 @@ export class Estadisticas implements OnInit {
     this.vehiculosPorDia = Array(7).fill(0);
     
     this.vehiculos.forEach(v => {
-      const dia = v.horaEntrada.getDay();
+      const entrada = this.convertirADate(v.horaEntrada);
+      const dia = entrada.getDay();
       this.vehiculosPorDia[dia]++;
     });
 
@@ -132,12 +177,14 @@ export class Estadisticas implements OnInit {
     }));
     
     this.vehiculos.forEach(v => {
-      const mes = v.horaEntrada.getMonth();
+      const entrada = this.convertirADate(v.horaEntrada);
+      const mes = entrada.getMonth();
       this.vehiculosPorMes[mes].total++;
       this.vehiculosPorMes[mes].tipos[v.tipo] = (this.vehiculosPorMes[mes].tipos[v.tipo] || 0) + 1;
       
       if (v.horaSalida) {
-        const tiempo = (v.horaSalida.getTime() - v.horaEntrada.getTime()) / 60000;
+        const salida = this.convertirADate(v.horaSalida);
+        const tiempo = (salida.getTime() - entrada.getTime()) / 60000;
         this.vehiculosPorMes[mes].tiempos.push(tiempo);
       }
     });
@@ -150,7 +197,7 @@ export class Estadisticas implements OnInit {
         if (data.total === 0) return null;
         
         const tipoMasComun = Object.entries(data.tipos)
-          .sort((a, b) => b[1] - a[1])[0];
+          .sort((a, b) => (b[1] as number) - (a[1] as number))[0];
         
         const promedioMes = data.tiempos.length > 0
           ? Math.floor(data.tiempos.reduce((a, b) => a + b, 0) / data.tiempos.length)
@@ -174,7 +221,9 @@ export class Estadisticas implements OnInit {
     this.vehiculosPorAnio = {};
     
     this.vehiculos.forEach(v => {
-      const anio = v.horaEntrada.getFullYear().toString();
+      const entrada = this.convertirADate(v.horaEntrada);
+      const anio = entrada.getFullYear().toString();
+      
       if (!this.vehiculosPorAnio[anio]) {
         this.vehiculosPorAnio[anio] = {
           total: 0,
@@ -184,11 +233,12 @@ export class Estadisticas implements OnInit {
       }
       
       this.vehiculosPorAnio[anio].total++;
-      const mes = v.horaEntrada.getMonth();
+      const mes = entrada.getMonth();
       this.vehiculosPorAnio[anio].meses[mes]++;
       
       if (v.horaSalida) {
-        const tiempo = (v.horaSalida.getTime() - v.horaEntrada.getTime()) / 60000;
+        const salida = this.convertirADate(v.horaSalida);
+        const tiempo = (salida.getTime() - entrada.getTime()) / 60000;
         this.vehiculosPorAnio[anio].tiempos.push(tiempo);
       }
     });
@@ -222,5 +272,30 @@ export class Estadisticas implements OnInit {
 
   calcularAlturaBarra(valor: number, max: number): number {
     return (valor / max) * 100;
+  }
+
+  /**
+   * Convierte un Timestamp de Firebase o Date a Date
+   */
+  private convertirADate(fecha: any): Date {
+    if (!fecha) return new Date();
+    if (fecha.toDate && typeof fecha.toDate === 'function') {
+      return fecha.toDate();
+    }
+    if (fecha instanceof Date) {
+      return fecha;
+    }
+    return new Date(fecha);
+  }
+
+  /**
+   * Navega a la página de login o panel admin
+   */
+  goToLogin(): void {
+    if (this.usuarioAutenticado) {
+      this.router.navigate(['/vehiculos']);
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 }

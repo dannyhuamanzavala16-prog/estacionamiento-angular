@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio';
 
 @Component({
   selector: 'app-login',
@@ -10,97 +11,75 @@ import { Router } from '@angular/router';
   styleUrl: './login.css',
 })
 export class Login implements OnInit {
-  usuario: string = '';
+  email: string = '';
   password: string = '';
   mensaje: string = '';
   mensajeTipo: string = '';
   isLoading: boolean = false;
 
-  // Credenciales de administradores
-  private adminUsers: { [key: string]: string } = {
-    'admin': 'admin123',
-    'zavalaTech': 'parking2025',
-    'administrador': 'zavala2025'
-  };
-
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private authService: AutenticacionServicio
+  ) {
     console.log('✅ Login component initialized');
   }
 
   ngOnInit(): void {
-    // Verificar si ya hay sesión activa
-    const isLoggedIn = localStorage.getItem('adminLoggedIn');
-    console.log('🔍 Checking existing session:', isLoggedIn);
-    
-    if (isLoggedIn === 'true') {
-      console.log('✅ Session exists, redirecting to /vehiculos');
-      this.router.navigate(['/vehiculos']);
-    }
+    // No redirigir automáticamente, dejar que el usuario decida
+    console.log('📋 Login page loaded');
   }
 
   onUsuarioChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.usuario = input.value;
-    console.log('👤 Usuario changed:', this.usuario);
+    this.email = input.value.trim();
   }
 
   onPasswordChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.password = input.value;
-    console.log('🔒 Password changed (length):', this.password.length);
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     console.log('🚀 ===== LOGIN ATTEMPT =====');
-    console.log('📝 Usuario:', this.usuario);
-    console.log('🔑 Password length:', this.password.length);
+    console.log('📧 Email:', this.email);
     
     // Limpiar mensaje anterior
     this.mensaje = '';
     this.isLoading = true;
 
     // Validar campos vacíos
-    if (!this.usuario.trim() || !this.password) {
+    if (!this.email.trim() || !this.password) {
       console.log('❌ Empty fields detected');
       this.mostrarMensaje('✗ Por favor completa todos los campos.', 'error');
       this.isLoading = false;
       return;
     }
 
-    // Validar credenciales
-    const usuarioTrim = this.usuario.trim();
-    console.log('🔍 Checking credentials for user:', usuarioTrim);
-    console.log('🔍 Expected password:', this.adminUsers[usuarioTrim]);
-    console.log('🔍 Provided password:', this.password);
-    console.log('🔍 Match:', this.adminUsers[usuarioTrim] === this.password);
-    
-    if (this.adminUsers[usuarioTrim] && this.adminUsers[usuarioTrim] === this.password) {
+    // Validar formato de email básico
+    if (!this.email.includes('@')) {
+      console.log('❌ Invalid email format');
+      this.mostrarMensaje('✗ Por favor ingresa un correo válido.', 'error');
+      this.isLoading = false;
+      return;
+    }
+
+    try {
+      // Intentar iniciar sesión con Firebase
+      await this.authService.iniciarSesion(this.email, this.password);
+      
       // Login exitoso
       console.log('✅ LOGIN SUCCESSFUL!');
       this.mostrarMensaje('✓ Inicio de sesión exitoso. Redirigiendo...', 'success');
       
-      // Guardar sesión
-      localStorage.setItem('adminLoggedIn', 'true');
-      localStorage.setItem('adminUsername', usuarioTrim);
-      localStorage.setItem('loginTime', new Date().toISOString());
-      console.log('💾 Session saved to localStorage');
-
-      // Redireccionar
+      // Redireccionar después de 1 segundo
       setTimeout(() => {
-        console.log('🔄 Attempting navigation to /vehiculos');
-        this.router.navigate(['/vehiculos']).then(
-          success => console.log('✅ Navigation successful:', success),
-          error => {
-            console.error('❌ Navigation error:', error);
-            this.mostrarMensaje('✗ Error al redireccionar. Verifica las rutas.', 'error');
-            this.isLoading = false;
-          }
-        );
+        this.router.navigate(['/inicio']);
       }, 1000);
-    } else {
+      
+    } catch (error: any) {
       // Login fallido
-      console.log('❌ LOGIN FAILED - Invalid credentials');
-      this.mostrarMensaje('✗ Usuario o contraseña incorrectos.', 'error');
+      console.log('❌ LOGIN FAILED:', error.message);
+      this.mostrarMensaje(`✗ ${error.message}`, 'error');
       this.password = '';
       this.isLoading = false;
     }

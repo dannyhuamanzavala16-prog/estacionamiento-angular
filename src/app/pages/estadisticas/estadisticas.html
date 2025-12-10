@@ -5,8 +5,12 @@
     <a routerLink="/inicio" routerLinkActive="active-link">Inicio</a>
     <a routerLink="/historial" routerLinkActive="active-link">Historial</a>
     <a routerLink="/estadisticas" routerLinkActive="active-link">Estadísticas</a>
+    <button class="btn-admin" (click)="goToLogin()">
+      {{ usuarioAutenticado ? '🚗 Panel Admin' : '🔐 Acceso Admin' }}
+    </button>
   </nav>
 </header>
+
 <main>
   
   <!-- ENCABEZADO -->

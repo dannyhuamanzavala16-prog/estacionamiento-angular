@@ -19,18 +19,18 @@
     <!-- FORMULARIO -->
     <div class="login-form">
       <div class="form-group">
-        <label for="usuario">
-          👤 Usuario
+        <label for="email">
+          📧 Correo Electrónico
         </label>
         <div class="input-wrapper">
-          <span class="input-icon">👤</span>
+          <span class="input-icon">📧</span>
           <input 
-            type="text" 
-            id="usuario" 
-            [value]="usuario"
+            type="email" 
+            id="email" 
+            [value]="email"
             (input)="onUsuarioChange($event)"
-            placeholder="Ingresa tu usuario"
-            autocomplete="username"
+            placeholder="admin@ejemplo.com"
+            autocomplete="email"
           >
         </div>
       </div>
@@ -61,8 +61,6 @@
         🚀 {{ isLoading ? 'Iniciando...' : 'Iniciar Sesión' }}
       </button>
     </div>
-
-  
 
     <!-- FOOTER -->
     <div class="login-footer">
