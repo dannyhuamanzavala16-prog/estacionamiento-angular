@@ -1,24 +1,22 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { EspaciosServicio } from '../../compartido/servicios/espacios.servicio';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
-import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio'; 
 import { EstadoEstacionamiento } from '../../compartido/modelos/espacio.modelo';
+import { HeaderComponent } from '../../compartido/componentes/header/header';
+import { FooterComponent } from '../../compartido/componentes/footer/footer';
 
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, RouterModule],
+  imports: [CommonModule, DecimalPipe, HeaderComponent, FooterComponent],
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css']
 })
 export class InicioComponent implements OnInit, OnDestroy {
   private espaciosServicio = inject(EspaciosServicio);
   private vehiculosServicio = inject(VehiculosServicio);
-  private authServicio = inject(AutenticacionServicio);
-  private router = inject(Router);
   private destroy$ = new Subject<void>();
 
   // Estado del estacionamiento
@@ -35,12 +33,8 @@ export class InicioComponent implements OnInit, OnDestroy {
   cargando = true;
   error = '';
 
-  // Usuario autenticado
-  usuarioAutenticado = false;
-
   ngOnInit(): void {
     console.log('🏠 Inicio component cargado con Firebase');
-    this.verificarAutenticacion();
     this.cargarDatosEnTiempoReal();
     this.actualizarHora();
     
@@ -51,17 +45,6 @@ export class InicioComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  /**
-   * Verifica si hay un usuario autenticado
-   */
-  private verificarAutenticacion(): void {
-    this.authServicio.user$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(user => {
-        this.usuarioAutenticado = !!user;
-      });
   }
 
   /**
@@ -175,16 +158,5 @@ export class InicioComponent implements OnInit, OnDestroy {
       return `${minutos}m ${segundos % 60}s`;
     }
     return `${segundos}s`;
-  }
-
-  /**
-   * Navega a la página de login
-   */
-  goToLogin(): void {
-    if (this.usuarioAutenticado) {
-      this.router.navigate(['/vehiculos']);
-    } else {
-      this.router.navigate(['/login']);
-    }
   }
 }

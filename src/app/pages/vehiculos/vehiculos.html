@@ -1,21 +1,4 @@
-<!-- ===== CABECERA DE ADMIN ===== -->
-<header class="admin-header">
-  <div class="header-container">
-    <h1>🅿️ ZavalaTech Parking</h1>
-    <nav>
-      <a (click)="irAInicio()" style="cursor: pointer;">Inicio</a>
-      <a class="activo">Vehículos</a>
-      <a (click)="irAHistorial()" style="cursor: pointer;">Historial</a>
-      <a (click)="irAEstadisticas()" style="cursor: pointer;">Estadísticas</a>
-      <div class="admin-badge">
-        <span>👤</span>
-        <span>{{ adminName }}</span>
-      </div>
-      <button (click)="cerrarSesion()" class="btn-logout" type="button">🚪 Salir</button>
-    </nav>
-  </div>
-</header>
-
+<app-admin-header></app-admin-header>
 <!-- ===== CONTENIDO PRINCIPAL ===== -->
 <main>
 
@@ -244,7 +227,5 @@
 
 </main>
 
-<!-- ===== PIE DE PÁGINA ===== -->
-<footer>
-  © 2025 <strong>ZavalaTech</strong> | Sistema de Gestión de Estacionamiento | Todos los derechos reservados
-</footer>
+<!-- FOOTER COMPARTIDO -->
+<app-footer></app-footer>

@@ -1,15 +1,5 @@
-<!-- CABECERA -->
-<header>
-  <h1>ZavalaTech Parking</h1>
-  <nav>
-    <a routerLink="/inicio" routerLinkActive="active-link">Inicio</a>
-    <a routerLink="/historial" routerLinkActive="active-link">Historial</a>
-    <a routerLink="/estadisticas" routerLinkActive="active-link">Estadísticas</a>
-    <button class="btn-admin" (click)="goToLogin()">
-      {{ usuarioAutenticado ? '🚗 Panel Admin' : '🔐 Acceso Admin' }}
-    </button>
-  </nav>
-</header>
+<!-- HEADER COMPARTIDO -->
+<app-header></app-header>
 
 <main>
   
@@ -169,7 +159,5 @@
   </ng-container>
 </main>
 
-<!-- PIE DE PÁGINA -->
-<footer>
-  © 2025 <strong>ZavalaTech</strong> | Sistema de Gestión de Estacionamiento | Todos los derechos reservados
-</footer>
+<!-- FOOTER COMPARTIDO -->
+<app-footer></app-footer>

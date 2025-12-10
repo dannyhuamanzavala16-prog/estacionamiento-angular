@@ -5,6 +5,8 @@ import { Subject, takeUntil } from 'rxjs';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
 import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio';
 import { Vehiculo } from '../../compartido/modelos/vehiculo.modelo';
+import { HeaderComponent } from '../../compartido/componentes/header/header';
+import { FooterComponent } from '../../compartido/componentes/footer/footer';
 
 interface TipoStats {
   tipo: string;
@@ -26,7 +28,7 @@ interface AnioData {
 @Component({
   selector: 'app-estadisticas',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, HeaderComponent, FooterComponent],
   templateUrl: './estadisticas.html',
   styleUrls: ['./estadisticas.css']
 })

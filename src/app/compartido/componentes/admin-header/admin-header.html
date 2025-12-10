@@ -1,1 +1,16 @@
-<p>admin-header works!</p>
+<header class="admin-header">
+    <div class="header-container">
+    <h1>🅿️ ZavalaTech Parking</h1>
+    <nav>
+        <a (click)="irA('/inicio')" [class.activo]="rutaActual === '/inicio'">Inicio</a>
+        <a (click)="irA('/vehiculos')" [class.activo]="rutaActual === '/vehiculos'">Vehículos</a>
+        <a (click)="irA('/historial')" [class.activo]="rutaActual === '/historial'">Historial</a>
+        <a (click)="irA('/estadisticas')" [class.activo]="rutaActual === '/estadisticas'">Estadísticas</a>
+        <div class="admin-badge">
+        <span>👤</span>
+        <span>{{ nombreAdmin }}</span>
+        </div>
+        <button (click)="cerrarSesion()" class="btn-logout" type="button">🚪 Salir</button>
+    </nav>
+    </div>
+</header>

@@ -1,0 +1,17 @@
+<header>
+    <h1>ZavalaTech Parking</h1>
+    <nav>
+    <a routerLink="/inicio" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">
+        Inicio
+    </a>
+    <a routerLink="/historial" routerLinkActive="active-link">
+        Historial
+    </a>
+    <a routerLink="/estadisticas" routerLinkActive="active-link">
+        Estadísticas
+    </a>
+    <button class="btn-admin" (click)="irAPanelAdmin()">
+        {{ usuarioAutenticado ? '🚗 Panel Admin' : '🔐 Acceso Admin' }}
+    </button>
+    </nav>
+</header>
