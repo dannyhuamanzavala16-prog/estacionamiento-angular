@@ -1,2 +1,10 @@
-<!-- Solo el router-outlet, sin cabecera ni pie -->
-<router-outlet></router-outlet>
+<!-- Header dinámico según el rol -->
+<app-header></app-header>
+
+<!-- Contenido principal -->
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>
+
+<!-- Footer -->
+<app-footer></app-footer>

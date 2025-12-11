@@ -1,17 +1,51 @@
 <header>
-    <h1>ZavalaTech Parking</h1>
-    <nav>
-    <a routerLink="/inicio" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">
-        Inicio
+  <h1>
+    🅿️ ZavalaTech Parking
+    <span class="header-rol" [ngClass]="'rol-' + rolActual">
+      <span class="rol-icono">{{ iconoRol }}</span>
+      <span class="rol-texto">{{ nombreRol }}</span>
+    </span>
+  </h1>
+  
+  <nav>
+    <!-- INICIO - Visible para todos -->
+    <a routerLink="/inicio" 
+       routerLinkActive="active-link" 
+       [routerLinkActiveOptions]="{exact: true}">
+      Inicio
     </a>
-    <a routerLink="/historial" routerLinkActive="active-link">
-        Historial
+
+    <!-- VEHÍCULOS - Solo Guardia y Admin -->
+    <a *ngIf="rolActual === 'guardia' || rolActual === 'admin'" 
+       routerLink="/vehiculos" 
+       routerLinkActive="active-link">
+      Vehículos
     </a>
-    <a routerLink="/estadisticas" routerLinkActive="active-link">
-        Estadísticas
+
+    <!-- BUSCAR - Solo Guardia -->
+    <a *ngIf="rolActual === 'guardia'" 
+       routerLink="/buscar" 
+       routerLinkActive="active-link">
+      Buscar
     </a>
-    <button class="btn-admin" (click)="irAPanelAdmin()">
-        {{ usuarioAutenticado ? '🚗 Panel Admin' : '🔐 Acceso Admin' }}
+
+    <!-- HISTORIAL - Solo Admin -->
+    <a *ngIf="rolActual === 'admin'" 
+       routerLink="/historial" 
+       routerLinkActive="active-link">
+      Historial
+    </a>
+
+    <!-- ESTADÍSTICAS - Solo Admin -->
+    <a *ngIf="rolActual === 'admin'" 
+       routerLink="/estadisticas" 
+       routerLinkActive="active-link">
+      Estadísticas
+    </a>
+
+    <!-- Botón de Acción (Login/Logout) -->
+    <button class="btn-action" (click)="accionPrincipal()">
+      {{ textoBotonAccion }}
     </button>
-    </nav>
+  </nav>
 </header>

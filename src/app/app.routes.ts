@@ -5,6 +5,9 @@ import { Estadisticas } from './pages/estadisticas/estadisticas';
 import { Login } from './pages/login/login';
 import { Vehiculos } from './pages/vehiculos/vehiculos';
 import { Buscar } from './pages/buscar/buscar';
+import { authGuard } from './nucleo/guardias/auth-guard';
+import { guardiaGuard } from './nucleo/guardias/guardia-guard';
+import { adminGuard } from './nucleo/guardias/admin-guard';
 
 export const routes: Routes = [
   // Ruta raíz redirige a inicio
@@ -14,39 +17,49 @@ export const routes: Routes = [
     pathMatch: 'full' 
   },
   
-  // Rutas públicas (SIN protección)
-  { 
-    path: 'login', 
-    component: Login, 
-    title: 'Acceso Admin' 
-  },
+  // RUTAS PÚBLICAS (Accesibles por todos)
   { 
     path: 'inicio', 
     component: InicioComponent, 
-    title: 'Inicio'
+    title: 'Inicio - ZavalaTech Parking'
   },
+  { 
+    path: 'login', 
+    component: Login, 
+    title: 'Iniciar Sesión'
+  },
+  
+  // RUTAS PARA GUARDIA Y ADMIN
+  { 
+    path: 'vehiculos', 
+    component: Vehiculos, 
+    title: 'Gestión de Vehículos',
+    canActivate: [authGuard] // Requiere autenticación
+  },
+  
+  // RUTAS SOLO PARA GUARDIA
+  { 
+    path: 'buscar', 
+    component: Buscar, 
+    title: 'Buscar Vehículo',
+    canActivate: [guardiaGuard] // Solo guardia
+  },
+  
+  // RUTAS SOLO PARA ADMIN
   { 
     path: 'historial', 
     component: Historial, 
-    title: 'Historial'
+    title: 'Historial de Vehículos',
+    canActivate: [adminGuard] // Solo admin
   },
   { 
     path: 'estadisticas', 
     component: Estadisticas, 
-    title: 'Estadísticas'
-  },
-  { 
-    path: 'vehiculos', 
-    component: Vehiculos, 
-    title: 'Vehículos'
-  },
-  { 
-    path: 'buscar', 
-    component: Buscar, 
-    title: 'Buscar Vehículo'
+    title: 'Estadísticas',
+    canActivate: [adminGuard] // Solo admin
   },
   
-  // Ruta por defecto
+  // RUTA POR DEFECTO
   { 
     path: '**', 
     redirectTo: '/inicio' 

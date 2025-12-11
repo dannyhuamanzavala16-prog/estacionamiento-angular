@@ -1,15 +1,22 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { HeaderComponent } from './compartido/componentes/header/header';
+import { FooterComponent } from './compartido/componentes/footer/footer';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [
+    RouterOutlet,
+    HeaderComponent,
+    FooterComponent
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
   constructor() {
-    console.log('🚀 App iniciado correctamente');
+    console.log('🚀 App iniciado con sistema de roles');
+    console.log('👤 Roles disponibles: Público, Guardia, Administrador');
   }
 }

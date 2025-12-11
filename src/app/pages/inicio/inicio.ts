@@ -4,13 +4,11 @@ import { Subject, takeUntil } from 'rxjs';
 import { EspaciosServicio } from '../../compartido/servicios/espacios.servicio';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
 import { EstadoEstacionamiento } from '../../compartido/modelos/espacio.modelo';
-import { HeaderComponent } from '../../compartido/componentes/header/header';
-import { FooterComponent } from '../../compartido/componentes/footer/footer';
 
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, HeaderComponent, FooterComponent],
+  imports: [CommonModule, DecimalPipe],
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css']
 })
