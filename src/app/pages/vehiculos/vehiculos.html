@@ -2,9 +2,9 @@
 <main>
 
   <!-- INDICADOR DE CARGA -->
-  <div *ngIf="cargando" class="loading-overlay">
-    <div class="loading-spinner"></div>
-    <p>Cargando datos desde Firebase...</p>
+  <div *ngIf="cargando" style="text-align: center; padding: 3rem; background: rgba(30, 41, 59, 0.6); border-radius: 1rem; margin-bottom: 2rem;">
+    <div style="display: inline-block; width: 50px; height: 50px; border: 4px solid rgba(251, 191, 36, 0.2); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    <p style="margin-top: 1rem; color: #cbd5e1; font-size: 1.125rem;">Cargando datos desde Firebase...</p>
   </div>
 
   <!-- ESTADO EN TIEMPO REAL -->
@@ -88,11 +88,11 @@
         </div>
         
         <button type="submit" [disabled]="procesando || espaciosLibres === 0">
-          <span *ngIf="!procesando">✔ Registrar Entrada</span>
+          <span *ngIf="!procesando">✓ Registrar Entrada</span>
           <span *ngIf="procesando">⏳ Procesando...</span>
         </button>
 
-        <div *ngIf="espaciosLibres === 0" class="alerta-sin-espacios">
+        <div *ngIf="espaciosLibres === 0" style="margin-top: 1rem; padding: 0.875rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #f87171; text-align: center; font-weight: 600;">
           ⚠️ No hay espacios disponibles
         </div>
       </form>
@@ -104,20 +104,25 @@
     <section class="tabla">
       <h2>🚗 Vehículos Registrados (Tiempo Real)</h2>
       
-      <div class="filtros-rapidos">
+      <!-- FILTROS RÁPIDOS -->
+      <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
         <button 
-          class="filtro-btn activo" 
-          (click)="filtroActual = 'todos'"
-          [class.activo]="filtroActual === 'todos'"
+          (click)="cambiarFiltro('todos')"
+          [style.background]="filtroActual === 'todos' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(15, 23, 42, 0.6)'"
+          [style.color]="filtroActual === 'todos' ? '#fbbf24' : '#cbd5e1'"
+          [style.border]="filtroActual === 'todos' ? '1px solid rgba(251, 191, 36, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'"
+          style="padding: 0.625rem 1.25rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.3s ease;"
         >
-          Todos ({{ vehiculos.length }})
+          📋 Todos ({{ vehiculos.length }})
         </button>
         <button 
-          class="filtro-btn" 
-          (click)="filtroActual = 'activos'"
-          [class.activo]="filtroActual === 'activos'"
+          (click)="cambiarFiltro('activos')"
+          [style.background]="filtroActual === 'activos' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(15, 23, 42, 0.6)'"
+          [style.color]="filtroActual === 'activos' ? '#34d399' : '#cbd5e1'"
+          [style.border]="filtroActual === 'activos' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'"
+          style="padding: 0.625rem 1.25rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.3s ease;"
         >
-          Activos ({{ vehiculosActivos }})
+          ✅ Activos ({{ vehiculosActivos }})
         </button>
       </div>
 
@@ -137,20 +142,20 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngIf="vehiculos.length === 0 && !cargando">
+            <tr *ngIf="vehiculosFiltrados.length === 0 && !cargando">
               <td colspan="9" style="text-align:center; padding: 2rem; color: #64748b;">
-                📭 No hay vehículos registrados actualmente.
+                🔭 No hay vehículos {{ filtroActual === 'activos' ? 'activos' : 'registrados' }} actualmente.
               </td>
             </tr>
             
             <tr *ngIf="cargando">
               <td colspan="9" style="text-align:center; padding: 2rem;">
-                <div class="loading-spinner-small"></div>
-                Cargando vehículos...
+                <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(251, 191, 36, 0.2); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p style="margin-top: 0.5rem; color: #94a3b8;">Cargando vehículos...</p>
               </td>
             </tr>
 
-            <tr *ngFor="let vehiculo of vehiculos">
+            <tr *ngFor="let vehiculo of vehiculosFiltrados">
               <td>
                 <div class="espacio-col">
                   E-{{ vehiculo.espacioNumero ? (vehiculo.espacioNumero < 10 ? '0' + vehiculo.espacioNumero : vehiculo.espacioNumero) : '-' }}
@@ -200,32 +205,39 @@
     
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">🚗</div>
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚗</div>
         <div class="stat-label">Vehículos Hoy</div>
         <div class="stat-value">{{ vehiculosHoy }}</div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">✅</div>
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">✅</div>
         <div class="stat-label">Activos Ahora</div>
         <div class="stat-value">{{ vehiculosActivos }}</div>
-        <div class="stat-sublabel">{{ porcentajeOcupacion }}% ocupación</div>
+        <div style="color: #64748b; font-size: 0.75rem; margin-top: 0.5rem;">{{ porcentajeOcupacion }}% ocupación</div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">⏱️</div>
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⏱️</div>
         <div class="stat-label">Tiempo Promedio</div>
-        <div class="stat-value">{{ tiempoPromedio }}</div>
-        <div class="stat-sublabel">Duración estancia</div>
+        <div class="stat-value" style="font-size: 1.5rem;">{{ tiempoPromedio }}</div>
+        <div style="color: #64748b; font-size: 0.75rem; margin-top: 0.5rem;">Duración estancia</div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">🅿️</div>
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🅿️</div>
         <div class="stat-label">Espacios Libres</div>
         <div class="stat-value">{{ espaciosLibres }}</div>
-        <div class="stat-sublabel">de {{ espaciosTotal }} total</div>
+        <div style="color: #64748b; font-size: 0.75rem; margin-top: 0.5rem;">de {{ espaciosTotal }} total</div>
       </div>
     </div>
   </section>
 
 </main>
+
+<!-- Animación de spin -->
+<style>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>

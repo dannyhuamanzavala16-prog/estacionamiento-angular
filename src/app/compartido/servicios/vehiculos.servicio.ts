@@ -240,12 +240,15 @@ export class VehiculosServicio {
   }
 
   /**
-   * ✅ Busca un vehículo activo por placa
+   * ✅ CORREGIDO: Busca un vehículo activo por placa
+   * Ahora con manejo de índice compuesto
    */
   async buscarVehiculoActivoPorPlaca(placa: string): Promise<Vehiculo | null> {
     try {
       const placaUpper = placa.toUpperCase().trim();
+      console.log('🔍 Buscando vehículo activo:', placaUpper);
       
+      // OPCIÓN 1: Con índice compuesto (recomendado)
       const q = query(
         this.coleccion,
         where('placa', '==', placaUpper),
@@ -257,6 +260,7 @@ export class VehiculosServicio {
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
         const data = doc.data();
+        console.log('✅ Vehículo encontrado:', data['placa']);
         return {
           id: doc.id,
           placa: data['placa'],
@@ -269,9 +273,57 @@ export class VehiculosServicio {
         } as Vehiculo;
       }
       
+      console.log('⚠️ No se encontró el vehículo');
       return null;
+    } catch (error: any) {
+      console.error('❌ Error al buscar vehículo activo:', error);
+      
+      // Si falla por falta de índice, usar método alternativo
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        console.log('⚠️ Índice no disponible, usando búsqueda alternativa...');
+        return this.buscarVehiculoActivoSinIndice(placa);
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * 🆕 NUEVO: Método alternativo sin índice compuesto
+   * Se usa si el índice no está creado aún
+   */
+  private async buscarVehiculoActivoSinIndice(placa: string): Promise<Vehiculo | null> {
+    try {
+      const placaUpper = placa.toUpperCase().trim();
+      
+      // Primero buscar por placa
+      const q = query(
+        this.coleccion,
+        where('placa', '==', placaUpper)
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      // Filtrar en el cliente por estado
+      const vehiculosDentro = snapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            placa: data['placa'],
+            propietario: data['propietario'],
+            tipo: data['tipo'],
+            estado: data['estado'],
+            espacioNumero: data['espacioNumero'],
+            horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+            horaSalida: data['horaSalida']?.toDate() || null
+          } as Vehiculo;
+        })
+        .filter(v => v.estado === EstadoVehiculo.DENTRO);
+      
+      return vehiculosDentro.length > 0 ? vehiculosDentro[0] : null;
     } catch (error) {
-      console.error('Error al buscar vehículo activo:', error);
+      console.error('❌ Error en búsqueda alternativa:', error);
       return null;
     }
   }

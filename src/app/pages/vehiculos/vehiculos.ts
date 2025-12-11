@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, interval } from 'rxjs';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
 import { EspaciosServicio } from '../../compartido/servicios/espacios.servicio';
 import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio';
@@ -35,6 +35,7 @@ export class Vehiculos implements OnInit, OnDestroy {
 
   // Listas principales
   vehiculos: VehiculoExtendido[] = [];
+  vehiculosFiltrados: VehiculoExtendido[] = [];
   espaciosUI: EspacioUI[] = [];
   
   // Estadísticas en tiempo real
@@ -72,6 +73,9 @@ export class Vehiculos implements OnInit, OnDestroy {
 
     // Cargar datos en tiempo real
     this.cargarDatosEnTiempoReal();
+
+    // Actualizar duraciones cada 30 segundos
+    this.iniciarActualizacionDuraciones();
   }
 
   ngOnDestroy(): void {
@@ -111,22 +115,37 @@ export class Vehiculos implements OnInit, OnDestroy {
           this.vehiculos = vehiculos.map(v => {
             const vehiculoExtendido: VehiculoExtendido = { ...v };
             
+            // Calcular duración para vehículos que ya salieron
             if (v.horaSalida && v.horaEntrada) {
               vehiculoExtendido.duracion = this.calcularDuracion(
                 v.horaEntrada,
                 v.horaSalida
+              );
+            } else if (v.estado === EstadoVehiculo.DENTRO) {
+              // Para vehículos activos, calcular duración hasta ahora
+              vehiculoExtendido.duracion = this.calcularDuracion(
+                v.horaEntrada,
+                new Date()
               );
             }
             
             return vehiculoExtendido;
           });
 
+          // Aplicar filtro actual
+          this.aplicarFiltro();
+
           // Actualizar estadísticas
           this.actualizarEstadisticas();
-          this.cargando = false;
+          
+          if (this.cargando) {
+            this.cargando = false;
+            console.log('✅ Carga inicial completada');
+          }
         },
         error: (error) => {
           console.error('❌ Error al cargar vehículos:', error);
+          this.mostrarMensaje('Error al cargar vehículos desde Firebase', 'error');
           this.cargando = false;
         }
       });
@@ -147,6 +166,7 @@ export class Vehiculos implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('❌ Error al cargar espacios:', error);
+          this.mostrarMensaje('Error al cargar espacios', 'error');
         }
       });
 
@@ -166,6 +186,50 @@ export class Vehiculos implements OnInit, OnDestroy {
           console.error('❌ Error al cargar estado:', error);
         }
       });
+  }
+
+  /**
+   * ✅ NUEVO: Actualiza las duraciones de vehículos activos cada 30 segundos
+   */
+  iniciarActualizacionDuraciones(): void {
+    interval(30000) // Cada 30 segundos
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.vehiculos = this.vehiculos.map(v => {
+          if (v.estado === EstadoVehiculo.DENTRO) {
+            return {
+              ...v,
+              duracion: this.calcularDuracion(v.horaEntrada, new Date())
+            };
+          }
+          return v;
+        });
+        
+        this.aplicarFiltro();
+        console.log('🔄 Duraciones actualizadas');
+      });
+  }
+
+  /**
+   * ✅ NUEVO: Aplica el filtro actual a los vehículos
+   */
+  aplicarFiltro(): void {
+    if (this.filtroActual === 'activos') {
+      this.vehiculosFiltrados = this.vehiculos.filter(
+        v => v.estado === EstadoVehiculo.DENTRO
+      );
+    } else {
+      this.vehiculosFiltrados = [...this.vehiculos];
+    }
+  }
+
+  /**
+   * ✅ NUEVO: Cambia el filtro de visualización
+   */
+  cambiarFiltro(filtro: 'todos' | 'activos'): void {
+    this.filtroActual = filtro;
+    this.aplicarFiltro();
+    console.log('🔍 Filtro aplicado:', filtro, '- Mostrando:', this.vehiculosFiltrados.length);
   }
 
   /**
@@ -194,6 +258,18 @@ export class Vehiculos implements OnInit, OnDestroy {
       return;
     }
 
+    // Validar formato de placa (básico)
+    if (placa.length < 3) {
+      this.mostrarMensaje('⚠️ La placa debe tener al menos 3 caracteres', 'error');
+      return;
+    }
+
+    // Verificar espacios disponibles
+    if (this.espaciosLibres === 0) {
+      this.mostrarMensaje('🚫 No hay espacios disponibles', 'error');
+      return;
+    }
+
     // Verificar si el vehículo ya está dentro
     const vehiculoActivo = await this.vehiculosServicio.buscarVehiculoActivoPorPlaca(placa);
     
@@ -206,10 +282,9 @@ export class Vehiculos implements OnInit, OnDestroy {
     }
 
     this.procesando = true;
+    console.log('💾 Registrando vehículo:', { placa, propietario, tipo });
 
     try {
-      console.log('💾 Registrando vehículo en Firebase...');
-      
       const vehiculoId = await this.vehiculosServicio.registrarEntrada({
         placa,
         propietario,
@@ -219,9 +294,9 @@ export class Vehiculos implements OnInit, OnDestroy {
       console.log('✅ Vehículo registrado con ID:', vehiculoId);
       
       // Esperar un momento para que Firebase actualice
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Obtener el vehículo recién registrado
+      // Obtener el vehículo recién registrado para mostrar el espacio asignado
       const vehiculosActuales = await this.vehiculosServicio.obtenerVehiculosDentroPromise();
       const vehiculoRegistrado = vehiculosActuales.find(v => v.id === vehiculoId);
       
@@ -230,6 +305,9 @@ export class Vehiculos implements OnInit, OnDestroy {
           `✅ Vehículo ${placa} registrado en espacio E-${String(vehiculoRegistrado.espacioNumero).padStart(2, '0')}`,
           'success'
         );
+        
+        // Resaltar el espacio asignado brevemente
+        this.resaltarEspacio(vehiculoRegistrado.espacioNumero);
       } else {
         this.mostrarMensaje(`✅ Vehículo ${placa} registrado correctamente`, 'success');
       }
@@ -239,10 +317,14 @@ export class Vehiculos implements OnInit, OnDestroy {
       
     } catch (error: any) {
       console.error('❌ Error al registrar vehículo:', error);
-      this.mostrarMensaje(
-        error.message || 'Error al registrar el vehículo',
-        'error'
-      );
+      
+      let mensajeError = 'Error al registrar el vehículo';
+      
+      if (error.message) {
+        mensajeError = error.message;
+      }
+      
+      this.mostrarMensaje(mensajeError, 'error');
     } finally {
       this.procesando = false;
     }
@@ -254,37 +336,57 @@ export class Vehiculos implements OnInit, OnDestroy {
   async finalizarVehiculo(vehiculo: VehiculoExtendido): Promise<void> {
     if (!vehiculo.id) {
       console.error('❌ Vehículo sin ID');
+      this.mostrarMensaje('Error: Vehículo sin identificador', 'error');
       return;
     }
 
+    const duracionActual = this.calcularDuracion(vehiculo.horaEntrada, new Date());
+    const costoActual = this.vehiculosServicio.calcularCosto(vehiculo.horaEntrada, new Date());
+
     const confirmar = window.confirm(
-      `¿Registrar salida del vehículo ${vehiculo.placa}?\n\nEspacio: E-${String(vehiculo.espacioNumero).padStart(2, '0')}`
+      `¿Registrar salida del vehículo ${vehiculo.placa}?\n\n` +
+      `Espacio: E-${String(vehiculo.espacioNumero).padStart(2, '0')}\n` +
+      `Propietario: ${vehiculo.propietario}\n` +
+      `Duración: ${duracionActual}\n` +
+      `Costo: S/. ${costoActual.toFixed(2)}`
     );
 
     if (!confirmar) return;
 
     this.procesando = true;
+    console.log('🚀 Registrando salida del vehículo:', vehiculo.placa);
 
     try {
-      console.log('🚀 Registrando salida del vehículo:', vehiculo.placa);
-      
       await this.vehiculosServicio.registrarSalida(vehiculo.id);
       
-      const duracion = this.calcularDuracion(vehiculo.horaEntrada, new Date());
-      const costo = this.vehiculosServicio.calcularCosto(vehiculo.horaEntrada, new Date());
+      const horaSalida = new Date();
+      const duracion = this.calcularDuracion(vehiculo.horaEntrada, horaSalida);
+      const costo = this.vehiculosServicio.calcularCosto(vehiculo.horaEntrada, horaSalida);
       
       console.log('✅ Salida registrada exitosamente');
       
+      // Mostrar resumen
+      alert(
+        `✅ SALIDA REGISTRADA\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🚗 Placa: ${vehiculo.placa}\n` +
+        `👤 Propietario: ${vehiculo.propietario}\n` +
+        `⏱️ Duración: ${duracion}\n` +
+        `💰 Costo total: S/. ${costo.toFixed(2)}\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      );
+      
       this.mostrarMensaje(
-        `✅ Salida registrada para ${vehiculo.placa}\n` +
-        `Duración: ${duracion}\n` +
-        `Costo: S/. ${costo.toFixed(2)}`,
+        `✅ Salida registrada: ${vehiculo.placa} - S/. ${costo.toFixed(2)}`,
         'success'
       );
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al registrar salida:', error);
-      this.mostrarMensaje('Error al registrar la salida del vehículo', 'error');
+      this.mostrarMensaje(
+        error.message || 'Error al registrar la salida del vehículo',
+        'error'
+      );
     } finally {
       this.procesando = false;
     }
@@ -295,6 +397,7 @@ export class Vehiculos implements OnInit, OnDestroy {
    */
   mostrarDetallesEspacio(espacio: EspacioUI): void {
     if (!espacio.ocupado || !espacio.vehiculo) {
+      console.log('ℹ️ Espacio libre:', espacio.numero);
       return;
     }
 
@@ -304,7 +407,7 @@ export class Vehiculos implements OnInit, OnDestroy {
     
     const mensaje = `
 🅿️ ESPACIO E-${String(espacio.numero).padStart(2, '0')}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🚗 Placa: ${v.placa}
 👤 Propietario: ${v.propietario}
@@ -313,10 +416,35 @@ export class Vehiculos implements OnInit, OnDestroy {
 ⏱️ Tiempo: ${tiempoActual}
 💰 Costo actual: S/. ${costoActual.toFixed(2)}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
     `.trim();
 
     alert(mensaje);
+  }
+
+  /**
+   * ✅ NUEVO: Resalta visualmente un espacio
+   */
+  resaltarEspacio(numeroEspacio: number): void {
+    // Scroll suave hacia el espacio
+    setTimeout(() => {
+      const espacioElement = document.querySelector(
+        `.space-card:nth-child(${numeroEspacio})`
+      ) as HTMLElement;
+      
+      if (espacioElement) {
+        espacioElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Efecto de resaltado
+        espacioElement.style.transform = 'scale(1.15)';
+        espacioElement.style.boxShadow = '0 0 20px rgba(251, 191, 36, 0.8)';
+        
+        setTimeout(() => {
+          espacioElement.style.transform = '';
+          espacioElement.style.boxShadow = '';
+        }, 2000);
+      }
+    }, 500);
   }
 
   /**
@@ -325,7 +453,7 @@ export class Vehiculos implements OnInit, OnDestroy {
   calcularDuracion(entrada: Date, salida: Date): string {
     const milisegundos = salida.getTime() - entrada.getTime();
     
-    if (milisegundos < 0) return '0s';
+    if (milisegundos < 0 || isNaN(milisegundos)) return '0s';
 
     const segundos = Math.floor(milisegundos / 1000);
     const minutos = Math.floor(segundos / 60);
@@ -376,7 +504,7 @@ export class Vehiculos implements OnInit, OnDestroy {
       v => v.estado === EstadoVehiculo.DENTRO
     ).length;
 
-    // Calcular tiempo promedio
+    // Calcular tiempo promedio de los que ya salieron hoy
     const finalizadosHoy = this.vehiculos.filter(v => {
       if (!v.horaSalida) return false;
       const fecha = new Date(v.horaEntrada);
@@ -402,13 +530,23 @@ export class Vehiculos implements OnInit, OnDestroy {
     } else {
       this.tiempoPromedio = '-';
     }
+
+    console.log('📊 Estadísticas actualizadas:', {
+      hoy: this.vehiculosHoy,
+      activos: this.vehiculosActivos,
+      promedio: this.tiempoPromedio
+    });
   }
 
   /**
    * ✅ Formatea una fecha para mostrar
    */
   formatearFecha(fecha: Date | string): string {
+    if (!fecha) return '-';
+    
     const date = fecha instanceof Date ? fecha : new Date(fecha);
+    
+    if (isNaN(date.getTime())) return '-';
     
     return date.toLocaleString('es-PE', {
       year: 'numeric',
@@ -432,7 +570,14 @@ export class Vehiculos implements OnInit, OnDestroy {
 
       setTimeout(() => {
         mensajeDiv.style.display = 'none';
-      }, 5000);
+      }, 6000);
+    }
+
+    // También mostrar en consola
+    if (tipo === 'success') {
+      console.log('✅', texto);
+    } else {
+      console.error('❌', texto);
     }
   }
 

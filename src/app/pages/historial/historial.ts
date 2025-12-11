@@ -41,7 +41,7 @@ export class Historial implements OnInit, OnDestroy {
   usuarioAutenticado = false;
 
   ngOnInit(): void {
-    console.log('📋 Historial component cargado con Firebase');
+    console.log('📋 Historial component cargado con Firebase en tiempo real');
     this.verificarAutenticacion();
     this.cargarVehiculosDesdeFirebase();
   }
@@ -49,6 +49,7 @@ export class Historial implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    console.log('🔌 Historial desconectado de Firebase');
   }
 
   /**
@@ -63,11 +64,11 @@ export class Historial implements OnInit, OnDestroy {
   }
 
   /**
-   * Carga vehículos desde Firebase en tiempo real
-   * CAMBIADO A PUBLIC para poder ser llamado desde el template
+   * ✅ Carga vehículos desde Firebase en tiempo real
+   * Público para poder ser llamado desde el template
    */
   cargarVehiculosDesdeFirebase(): void {
-    console.log('🔄 Iniciando carga de vehículos...');
+    console.log('🔄 Iniciando listener en tiempo real...');
     this.cargando = true;
     this.error = '';
     
@@ -75,19 +76,17 @@ export class Historial implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (vehiculos: Vehiculo[]) => {
-          console.log('✅ Datos recibidos de Firebase:', vehiculos);
+          console.log('✅ Datos recibidos en tiempo real:', vehiculos.length, 'vehículos');
           this.vehiculos = vehiculos;
           this.cargando = false;
           this.error = '';
-          console.log('🚗 Vehículos cargados exitosamente:', vehiculos.length);
           
+          // ✅ CORREGIDO: Actualizar estadísticas cada vez que cambian los datos
           this.actualizarEstadisticas();
           this.actualizarTabla();
         },
         error: (err: any) => {
-          console.error('❌ Error completo:', err);
-          console.error('❌ Error mensaje:', err.message);
-          console.error('❌ Error stack:', err.stack);
+          console.error('❌ Error en tiempo real:', err);
           this.error = `Error al cargar el historial: ${err.message || 'Error desconocido'}`;
           this.cargando = false;
         }
@@ -95,7 +94,8 @@ export class Historial implements OnInit, OnDestroy {
   }
 
   /**
-   * Actualiza las estadísticas del historial
+   * ✅ Actualiza las estadísticas del historial
+   * Ahora se llama cada vez que cambian los datos
    */
   private actualizarEstadisticas(): void {
     this.totalRegistros = this.vehiculos.length;
@@ -138,10 +138,17 @@ export class Historial implements OnInit, OnDestroy {
     } else {
       this.tipoComun = '-';
     }
+
+    console.log('📊 Estadísticas actualizadas:', {
+      total: this.totalRegistros,
+      hoy: this.registrosHoy,
+      promedio: this.tiempoPromedio,
+      tipoComun: this.tipoComun
+    });
   }
 
   /**
-   * Actualiza la tabla con los filtros aplicados
+   * ✅ Actualiza la tabla con los filtros aplicados
    */
   actualizarTabla(): void {
     const busquedaPlaca = this.filtroPlaca.trim().toUpperCase();
@@ -175,7 +182,7 @@ export class Historial implements OnInit, OnDestroy {
   }
 
   /**
-   * Convierte un Timestamp de Firebase o Date a Date
+   * ✅ Convierte un Timestamp de Firebase o Date a Date
    */
   private convertirADate(fecha: any): Date {
     if (!fecha) return new Date();
@@ -192,14 +199,14 @@ export class Historial implements OnInit, OnDestroy {
   }
 
   /**
-   * Obtiene la fecha formateada para el template
+   * ✅ Obtiene la fecha formateada para el template
    */
   obtenerFecha(fecha: any): Date {
     return this.convertirADate(fecha);
   }
 
   /**
-   * Calcula el tiempo transcurrido entre entrada y salida
+   * ✅ Calcula el tiempo transcurrido entre entrada y salida
    */
   calcularTiempo(entrada: any, salida?: any): string {
     if (!salida) return '-';
@@ -226,7 +233,7 @@ export class Historial implements OnInit, OnDestroy {
   }
 
   /**
-   * Exporta el historial a CSV
+   * ✅ Exporta el historial a CSV
    */
   exportarCSV(): void {
     if (this.vehiculos.length === 0) {
