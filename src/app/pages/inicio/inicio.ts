@@ -4,11 +4,12 @@ import { Subject, takeUntil } from 'rxjs';
 import { EspaciosServicio } from '../../compartido/servicios/espacios.servicio';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
 import { EstadoEstacionamiento } from '../../compartido/modelos/espacio.modelo';
+import { DuracionPipe, MonedaPipe, PorcentajePipe, PlacaPipe } from '../../compartido/pipes';
 
 @Component({
   selector: 'app-inicio',
   standalone: true,
-  imports: [CommonModule, DecimalPipe],
+  imports: [CommonModule, DecimalPipe, DuracionPipe, MonedaPipe, PorcentajePipe, PlacaPipe],
   templateUrl: './inicio.html',
   styleUrls: ['./inicio.css']
 })
@@ -36,25 +37,25 @@ export class InicioComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log('🏠 Inicio component cargado con Firebase en tiempo real');
-    
+
     // CRÍTICO: Inyectar el servicio de espacios en vehiculos para evitar dependencia circular
     this.vehiculosServicio.setEspaciosServicio(this.espaciosServicio);
-    
+
     // Cargar datos en tiempo real
     this.cargarDatosEnTiempoReal();
     this.actualizarHora();
-    
+
     // Actualizar hora cada segundo
     this.intervaloHora = setInterval(() => this.actualizarHora(), 1000);
   }
 
   ngOnDestroy(): void {
     console.log('🔌 Destruyendo componente Inicio - limpiando suscripciones');
-    
+
     // Limpiar suscripciones
     this.destroy$.next();
     this.destroy$.complete();
-    
+
     // Limpiar intervalo
     if (this.intervaloHora) {
       clearInterval(this.intervaloHora);
@@ -73,18 +74,18 @@ export class InicioComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (estado: EstadoEstacionamiento) => {
           console.log('📊 Estado actualizado:', estado);
-          
+
           this.total = estado.espaciosTotales;
           this.ocupados = estado.espaciosOcupados;
           this.libres = estado.espaciosLibres;
           this.porcentajeOcupacion = estado.porcentajeOcupacion;
-          
+
           // Ocultar loading solo después de la primera carga
           if (this.cargando) {
             this.cargando = false;
             console.log('✅ Primera carga completada');
           }
-          
+
           this.error = '';
         },
         error: (err) => {
@@ -104,7 +105,7 @@ export class InicioComponent implements OnInit, OnDestroy {
             ocupados: espacios.filter(e => e.ocupado).length,
             libres: espacios.filter(e => !e.ocupado).length
           });
-          
+
           this.espacios = espacios;
 
           // Log de espacios ocupados con detalles
@@ -120,7 +121,7 @@ export class InicioComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           console.error('❌ Error al cargar espacios:', err);
-          
+
           // Mostrar error solo si no hay otro error activo
           if (!this.error) {
             this.error = 'Error al cargar los espacios del estacionamiento.';
@@ -149,16 +150,16 @@ export class InicioComponent implements OnInit, OnDestroy {
    */
   actualizarEstado(): void {
     console.log('🔄 Actualización manual solicitada por el usuario');
-    
+
     // Mostrar indicador de carga brevemente para dar feedback
     const cargandoPrevio = this.cargando;
     this.cargando = true;
-    
+
     // Como ya tenemos observables en tiempo real, solo mostramos feedback
     setTimeout(() => {
       this.cargando = cargandoPrevio;
       console.log('✅ Interfaz actualizada');
-      
+
       // Mostrar notificación de actualización
       this.mostrarNotificacion('Datos actualizados correctamente');
     }, 500);
@@ -183,34 +184,45 @@ export class InicioComponent implements OnInit, OnDestroy {
       } else {
         entrada = new Date(vehiculo.horaEntrada);
       }
-      
+
       const ahora = new Date();
-      const tiempoTranscurrido = this.calcularTiempo(entrada, ahora);
+
+      // Usar el pipe de duración para consistencia
+      const duracionPipe = new DuracionPipe();
+      const tiempoTranscurrido = duracionPipe.transform(entrada, ahora);
 
       // Calcular costo estimado
       const costoEstimado = this.vehiculosServicio.calcularCosto(entrada, ahora);
+
+      // Usar el pipe de moneda para consistencia
+      const monedaPipe = new MonedaPipe();
+      const costoFormateado = monedaPipe.transform(costoEstimado);
+
+      // Usar el pipe de placa para consistencia
+      const placaPipe = new PlacaPipe();
+      const placaFormateada = placaPipe.transform(vehiculo.placa);
 
       const mensaje = `
 🚗 INFORMACIÓN DEL ESPACIO E-${String(vehiculo.espacioNumero || '??').padStart(2, '0')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📋 Placa: ${vehiculo.placa}
+📋 Placa: ${placaFormateada}
 🚙 Tipo: ${vehiculo.tipo}
 👤 Propietario: ${vehiculo.propietario}
 🕐 Hora de entrada: ${entrada.toLocaleString('es-PE', {
-  day: '2-digit',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}
 ⏱️ Tiempo estacionado: ${tiempoTranscurrido}
-💰 Costo estimado: S/. ${costoEstimado.toFixed(2)}
+💰 Costo estimado: ${costoFormateado}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
       `.trim();
 
       alert(mensaje);
-      
+
       console.log('📄 Información mostrada para:', vehiculo.placa);
     } catch (error) {
       console.error('❌ Error al mostrar información:', error);
@@ -223,7 +235,7 @@ export class InicioComponent implements OnInit, OnDestroy {
    */
   private calcularTiempo(entrada: Date, salida: Date): string {
     const milisegundos = salida.getTime() - entrada.getTime();
-    
+
     // Validar que la fecha sea válida
     if (milisegundos < 0 || isNaN(milisegundos)) {
       return '0s';
@@ -240,17 +252,17 @@ export class InicioComponent implements OnInit, OnDestroy {
       const minutosRestantes = minutos % 60;
       return `${dias}d ${horasRestantes}h ${minutosRestantes}m`;
     }
-    
+
     if (horas > 0) {
       const minutosRestantes = minutos % 60;
       return `${horas}h ${minutosRestantes}m`;
     }
-    
+
     if (minutos > 0) {
       const segundosRestantes = segundos % 60;
       return `${minutos}m ${segundosRestantes}s`;
     }
-    
+
     return `${segundos}s`;
   }
 
@@ -274,9 +286,9 @@ export class InicioComponent implements OnInit, OnDestroy {
       box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
       animation: slideIn 0.3s ease-out;
     `;
-    
+
     document.body.appendChild(notif);
-    
+
     // Eliminar después de 3 segundos
     setTimeout(() => {
       notif.style.animation = 'slideOut 0.3s ease-in';

@@ -1,0 +1,111 @@
+<!-- src/app/compartido/componentes/modal/modal.component.html -->
+<div class="modal-overlay" *ngIf="isOpen" (click)="close()">
+  <div [class]="getModalClass()" (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-icon">{{ getIconClass() }}</div>
+      <h2 class="modal-title">{{ config.title }}</h2>
+      <button class="modal-close-btn" (click)="close()" aria-label="Cerrar">
+        ✕
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+      <!-- Mensaje simple -->
+      <p *ngIf="config.message" class="modal-message">{{ config.message }}</p>
+
+      <!-- Contenido personalizado para detalles de vehículo -->
+      <div *ngIf="config.type === 'detail' && config.data" class="vehicle-details">
+        <div class="detail-row">
+          <span class="detail-label">🅿️ Espacio:</span>
+          <span class="detail-value">E-{{ config.data.espacioNumero < 10 ? '0' + config.data.espacioNumero : config.data.espacioNumero }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🚗 Placa:</span>
+          <span class="detail-value placa">{{ config.data.placa }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">👤 Propietario:</span>
+          <span class="detail-value">{{ config.data.propietario }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🚙 Tipo:</span>
+          <span class="detail-value">{{ config.data.tipo }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🕐 Entrada:</span>
+          <span class="detail-value">{{ config.data.horaEntrada }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">⏱️ Tiempo:</span>
+          <span class="detail-value">{{ config.data.duracion }}</span>
+        </div>
+        <div class="detail-row highlight">
+          <span class="detail-label">💰 Costo actual:</span>
+          <span class="detail-value cost">S/. {{ config.data.costo }}</span>
+        </div>
+      </div>
+
+      <!-- Contenido para confirmación de salida -->
+      <div *ngIf="config.type === 'confirm' && config.data" class="confirm-details">
+        <div class="confirm-info">
+          <p><strong>🚗 Vehículo:</strong> {{ config.data.placa }}</p>
+          <p><strong>🅿️ Espacio:</strong> E-{{ config.data.espacioNumero < 10 ? '0' + config.data.espacioNumero : config.data.espacioNumero }}</p>
+          <p><strong>👤 Propietario:</strong> {{ config.data.propietario }}</p>
+          <p><strong>⏱️ Duración:</strong> {{ config.data.duracion }}</p>
+          <p class="cost-highlight"><strong>💰 Costo a pagar:</strong> S/. {{ config.data.costo }}</p>
+        </div>
+      </div>
+
+      <!-- Contenido para ticket de salida -->
+      <div *ngIf="config.type === 'success' && config.data" class="ticket">
+        <div class="ticket-header">
+          <h3>🎫 TICKET DE SALIDA</h3>
+        </div>
+        <div class="ticket-body">
+          <div class="ticket-row">
+            <span>🚗 Placa:</span>
+            <span class="ticket-value">{{ config.data.placa }}</span>
+          </div>
+          <div class="ticket-row">
+            <span>👤 Propietario:</span>
+            <span class="ticket-value">{{ config.data.propietario }}</span>
+          </div>
+          <div class="ticket-row">
+            <span>⏱️ Duración:</span>
+            <span class="ticket-value">{{ config.data.duracion }}</span>
+          </div>
+          <div class="ticket-divider"></div>
+          <div class="ticket-row total">
+            <span>💰 TOTAL A PAGAR:</span>
+            <span class="ticket-total">S/. {{ config.data.costo }}</span>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <p>¡Gracias por su preferencia!</p>
+          <p class="ticket-date">{{ config.data.fecha }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button 
+        *ngIf="config.showCancel && config.type === 'confirm'" 
+        class="modal-btn modal-btn-cancel" 
+        (click)="cancel()">
+        {{ config.cancelText }}
+      </button>
+      <button 
+        class="modal-btn modal-btn-confirm" 
+        [class.modal-btn-success]="config.type === 'success'"
+        [class.modal-btn-danger]="config.type === 'confirm'"
+        (click)="confirm()">
+        {{ config.confirmText }}
+      </button>
+    </div>
+
+  </div>
+</div>

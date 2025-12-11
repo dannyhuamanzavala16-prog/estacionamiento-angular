@@ -52,35 +52,28 @@
     <div class="progress-container">
       <div class="progress-label">
         <span>Ocupación del estacionamiento</span>
-        <span><strong>{{ porcentajeOcupacion }}%</strong></span>
+        <span><strong>{{ porcentajeOcupacion | porcentaje:true:1 }}</strong></span>
       </div>
       <div class="progress-bar">
-        <div 
-          class="progress-fill"
-          [ngClass]="{
+        <div class="progress-fill" [ngClass]="{
             'high': porcentajeOcupacion >= 80,
             'medium': porcentajeOcupacion >= 50 && porcentajeOcupacion < 80
-          }"
-          [style.width.%]="porcentajeOcupacion"
-        >
-          <span *ngIf="porcentajeOcupacion > 10">{{ porcentajeOcupacion }}%</span>
+          }" [style.width.%]="porcentajeOcupacion">
+          <span *ngIf="porcentajeOcupacion > 10">{{ porcentajeOcupacion | porcentaje:true:1 }}</span>
         </div>
       </div>
     </div>
 
     <!-- GRID DE ESPACIOS -->
     <div class="spaces-grid">
-      <div
-        *ngFor="let espacio of espacios"
-        [ngClass]="espacio.ocupado ? 'space-card ocupado' : 'space-card libre'"
+      <div *ngFor="let espacio of espacios" [ngClass]="espacio.ocupado ? 'space-card ocupado' : 'space-card libre'"
         (click)="espacio.ocupado ? mostrarInfoEspacio(espacio.vehiculo) : null"
-        [title]="espacio.ocupado ? 'Click para ver detalles' : 'Espacio disponible'"
-      >
+        [title]="espacio.ocupado ? 'Click para ver detalles' : 'Espacio disponible'">
         <div class="space-number">E-{{ espacio.numero | number:'2.0' }}</div>
         <div class="space-label">{{ espacio.ocupado ? 'Ocupado' : 'Libre' }}</div>
 
         <div class="space-info" *ngIf="espacio.ocupado && espacio.vehiculo">
-          {{ espacio.vehiculo.placa }}
+          {{ espacio.vehiculo.placa | placa }}
         </div>
       </div>
     </div>
@@ -112,9 +105,9 @@
         <div class="info-icon">💰</div>
         <div class="info-title">Tarifas</div>
         <div class="info-text">
-          Primera hora: S/. 5.00<br>
-          Horas adicionales: S/. 3.00<br>
-          Tarifa diaria: S/. 25.00
+          Primera hora: {{ 5 | moneda }}<br>
+          Horas adicionales: {{ 3 | moneda }}<br>
+          Tarifa diaria: {{ 25 | moneda }}
         </div>
       </div>
 

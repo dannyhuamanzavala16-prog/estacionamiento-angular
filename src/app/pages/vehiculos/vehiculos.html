@@ -232,8 +232,20 @@
       </div>
     </div>
   </section>
+<!-- Al final de vehiculos.html, antes de </main> -->
+
+<!-- 🆕 MODAL COMPONENT -->
+<app-modal
+  [isOpen]="modalOpen"
+  [config]="modalConfig"
+  (onConfirm)="confirmarSalida()"
+  (onCancel)="cancelarModal()"
+  (onClose)="cerrarModal()">
+</app-modal>
 
 </main>
+
+
 
 <!-- Animación de spin -->
 <style>

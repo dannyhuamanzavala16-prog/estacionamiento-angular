@@ -1,0 +1,340 @@
+/* src/app/compartido/componentes/modal/modal.component.css */
+
+/* Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Content */
+.modal-content {
+  background: rgba(30, 41, 59, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  position: relative;
+}
+
+.modal-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.modal-title {
+  flex: 1;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* Body */
+.modal-body {
+  padding: 1.5rem;
+  color: #cbd5e1;
+}
+
+.modal-message {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+/* Vehicle Details */
+.vehicle-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.detail-row.highlight {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.detail-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.detail-value {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.detail-value.placa {
+  font-family: 'Courier New', monospace;
+  color: #fbbf24;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.detail-value.cost {
+  color: #fbbf24;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* Confirm Details */
+.confirm-details {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.confirm-info p {
+  margin: 0.5rem 0;
+  font-size: 0.9375rem;
+  color: #cbd5e1;
+}
+
+.cost-highlight {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 1.125rem !important;
+  color: #fbbf24 !important;
+}
+
+/* Ticket */
+.ticket {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 2px dashed rgba(251, 191, 36, 0.3);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.ticket-header {
+  background: rgba(251, 191, 36, 0.2);
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 2px dashed rgba(251, 191, 36, 0.3);
+}
+
+.ticket-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ticket-body {
+  padding: 1.5rem;
+}
+
+.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.ticket-row span:first-child {
+  color: #94a3b8;
+}
+
+.ticket-value {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.ticket-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(251, 191, 36, 0.3), transparent);
+  margin: 1rem 0;
+}
+
+.ticket-row.total {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.ticket-total {
+  color: #fbbf24;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.ticket-footer {
+  background: rgba(15, 23, 42, 0.4);
+  padding: 1rem;
+  text-align: center;
+  border-top: 2px dashed rgba(251, 191, 36, 0.3);
+}
+
+.ticket-footer p {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.ticket-date {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+}
+
+/* Footer */
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-btn-cancel {
+  background: rgba(100, 116, 139, 0.2);
+  color: #cbd5e1;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.modal-btn-cancel:hover {
+  background: rgba(100, 116, 139, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-btn-confirm {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #0f172a;
+  box-shadow: 0 4px 6px rgba(251, 191, 36, 0.3);
+}
+
+.modal-btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(251, 191, 36, 0.5);
+}
+
+.modal-btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+}
+
+.modal-btn-success:hover {
+  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.5);
+}
+
+.modal-btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+}
+
+.modal-btn-danger:hover {
+  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-content {
+    max-width: calc(100% - 2rem);
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-btn {
+    width: 100%;
+  }
+}
