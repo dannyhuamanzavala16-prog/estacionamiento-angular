@@ -1,4 +1,4 @@
-import { Injectable, inject, NgZone } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -11,7 +11,8 @@ import {
   orderBy, 
   Timestamp,
   onSnapshot,
-  Unsubscribe
+  Unsubscribe,
+  getDoc
 } from '@angular/fire/firestore';
 import { Vehiculo, TipoVehiculo, EstadoVehiculo } from '../modelos/vehiculo.modelo';
 import { Observable } from 'rxjs';
@@ -22,71 +23,77 @@ import { EspaciosServicio } from './espacios.servicio';
 })
 export class VehiculosServicio {
   private firestore = inject(Firestore);
-  private espaciosServicio = inject(EspaciosServicio);
-  private ngZone = inject(NgZone);
+  private espaciosServicio!: EspaciosServicio;
   private coleccion = collection(this.firestore, 'vehiculos');
 
   /**
-   * Obtiene TODOS los vehículos en tiempo real (para historial)
-   * SOLUCIÓN DEFINITIVA: Ejecuta onSnapshot dentro de NgZone
+   * Inyección manual de EspaciosServicio para evitar dependencia circular
+   */
+  setEspaciosServicio(servicio: EspaciosServicio): void {
+    this.espaciosServicio = servicio;
+  }
+
+  /**
+   * ✅ SOLUCIÓN: Obtiene TODOS los vehículos ordenados por fecha de entrada
+   * SIN orderBy para evitar problemas de índice compuesto
    */
   obtenerVehiculos(): Observable<Vehiculo[]> {
-    console.log('🔍 Consultando vehículos en Firestore...');
+    console.log('🔍 Iniciando listener de vehículos...');
     
     return new Observable(observer => {
-      const q = query(
-        this.coleccion,
-        orderBy('horaEntrada', 'desc')
+      // Query simple sin orderBy para evitar índice compuesto
+      const q = query(this.coleccion);
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          console.log('📦 Snapshot recibido:', snapshot.size, 'documentos');
+          
+          const vehiculos = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              placa: data['placa'],
+              propietario: data['propietario'],
+              tipo: data['tipo'],
+              estado: data['estado'],
+              espacioNumero: data['espacioNumero'],
+              horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+              horaSalida: data['horaSalida']?.toDate() || null
+            } as Vehiculo;
+          });
+
+          // Ordenar en el cliente por fecha más reciente
+          vehiculos.sort((a, b) => b.horaEntrada.getTime() - a.horaEntrada.getTime());
+          
+          console.log('✅ Vehículos procesados:', vehiculos.length);
+          observer.next(vehiculos);
+        },
+        (error) => {
+          console.error('❌ Error en snapshot de vehículos:', error);
+          observer.error(error);
+        }
       );
 
-      let unsubscribe: Unsubscribe;
-
-      // Ejecutar dentro de NgZone para evitar el warning
-      this.ngZone.runOutsideAngular(() => {
-        unsubscribe = onSnapshot(
-          q,
-          (snapshot) => {
-            console.log('📦 Snapshot recibido, documentos:', snapshot.size);
-            const vehiculos = snapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                id: doc.id,
-                ...data,
-                horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-                horaSalida: data['horaSalida']?.toDate()
-              } as Vehiculo;
-            });
-            console.log('✅ Vehículos procesados:', vehiculos.length);
-            
-            // Volver a entrar en la zona de Angular para actualizar la UI
-            this.ngZone.run(() => {
-              observer.next(vehiculos);
-            });
-          },
-          (error) => {
-            console.error('❌ Error en snapshot:', error);
-            this.ngZone.run(() => {
-              observer.error(error);
-            });
-          }
-        );
-      });
-
-      // Cleanup cuando se desuscribe
       return () => {
         console.log('🔌 Desuscribiendo de vehículos');
-        if (unsubscribe) {
-          unsubscribe();
-        }
+        unsubscribe();
       };
     });
   }
 
   /**
-   * Registra la entrada de un vehículo y asigna un espacio
+   * ✅ MEJORADO: Registra la entrada con manejo robusto de errores
    */
   async registrarEntrada(vehiculo: Omit<Vehiculo, 'id' | 'estado' | 'horaEntrada' | 'espacioNumero'>): Promise<string> {
     try {
+      console.log('🚗 Iniciando registro de entrada para:', vehiculo.placa);
+
+      // Verificar que EspaciosServicio esté disponible
+      if (!this.espaciosServicio) {
+        throw new Error('Servicio de espacios no disponible');
+      }
+
       // Buscar espacio libre del tipo adecuado
       const espaciosLibres = await this.espaciosServicio.obtenerEspaciosLibres(vehiculo.tipo);
       
@@ -95,126 +102,137 @@ export class VehiculosServicio {
       }
 
       const espacioAsignado = espaciosLibres[0];
+      console.log('📍 Espacio asignado:', espacioAsignado.numero);
 
+      // Crear el documento del vehículo
       const nuevoVehiculo = {
-        ...vehiculo,
         placa: vehiculo.placa.toUpperCase(),
-        horaEntrada: Timestamp.fromDate(new Date()),
+        propietario: vehiculo.propietario,
+        tipo: vehiculo.tipo,
+        horaEntrada: Timestamp.now(),
         estado: EstadoVehiculo.DENTRO,
         espacioNumero: espacioAsignado.numero
       };
 
+      // Guardar en Firestore
       const docRef = await addDoc(this.coleccion, nuevoVehiculo);
+      console.log('💾 Vehículo guardado con ID:', docRef.id);
       
       // Marcar el espacio como ocupado
       await this.espaciosServicio.ocuparEspacio(espacioAsignado.numero, docRef.id);
+      console.log('✅ Espacio marcado como ocupado');
 
-      console.log(`✅ Vehículo ${vehiculo.placa} registrado en espacio ${espacioAsignado.numero}`);
       return docRef.id;
     } catch (error) {
-      console.error('Error al registrar entrada:', error);
+      console.error('❌ Error al registrar entrada:', error);
       throw error;
     }
   }
 
   /**
-   * Registra la salida de un vehículo y libera el espacio
+   * ✅ CORREGIDO: Registra la salida con validación mejorada
    */
   async registrarSalida(vehiculoId: string): Promise<void> {
     try {
+      console.log('🚀 Iniciando registro de salida para ID:', vehiculoId);
+
       const docRef = doc(this.firestore, `vehiculos/${vehiculoId}`);
       
-      // Obtener información del vehículo antes de actualizar
-      const vehiculoData = await getDocs(query(this.coleccion, where('__name__', '==', vehiculoId)));
+      // Obtener datos del vehículo primero
+      const docSnap = await getDoc(docRef);
       
-      if (!vehiculoData.empty) {
-        const vehiculo = vehiculoData.docs[0].data() as Vehiculo;
-        
-        // Actualizar el vehículo
-        await updateDoc(docRef, {
-          horaSalida: Timestamp.fromDate(new Date()),
-          estado: EstadoVehiculo.FUERA
-        });
-
-        // Liberar el espacio si estaba asignado
-        if (vehiculo.espacioNumero) {
-          await this.espaciosServicio.liberarEspacio(vehiculo.espacioNumero);
-          console.log(`✅ Espacio ${vehiculo.espacioNumero} liberado`);
-        }
+      if (!docSnap.exists()) {
+        throw new Error('Vehículo no encontrado');
       }
+
+      const vehiculoData = docSnap.data() as Vehiculo;
+      console.log('📋 Datos del vehículo:', vehiculoData);
+
+      // Actualizar el documento
+      await updateDoc(docRef, {
+        horaSalida: Timestamp.now(),
+        estado: EstadoVehiculo.FUERA
+      });
+      console.log('💾 Documento actualizado');
+
+      // Liberar el espacio
+      if (vehiculoData.espacioNumero) {
+        await this.espaciosServicio.liberarEspacio(vehiculoData.espacioNumero);
+        console.log('✅ Espacio liberado:', vehiculoData.espacioNumero);
+      }
+
     } catch (error) {
-      console.error('Error al registrar salida:', error);
+      console.error('❌ Error al registrar salida:', error);
       throw error;
     }
   }
 
   /**
-   * Obtiene vehículos que están actualmente dentro en tiempo real
+   * ✅ Obtiene vehículos que están actualmente dentro
    */
   obtenerVehiculosDentro(): Observable<Vehiculo[]> {
     return new Observable(observer => {
       const q = query(
         this.coleccion,
-        where('estado', '==', EstadoVehiculo.DENTRO),
-        orderBy('horaEntrada', 'desc')
+        where('estado', '==', EstadoVehiculo.DENTRO)
       );
 
-      let unsubscribe: Unsubscribe;
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const vehiculos = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              placa: data['placa'],
+              propietario: data['propietario'],
+              tipo: data['tipo'],
+              estado: data['estado'],
+              espacioNumero: data['espacioNumero'],
+              horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+              horaSalida: data['horaSalida']?.toDate() || null
+            } as Vehiculo;
+          });
 
-      this.ngZone.runOutsideAngular(() => {
-        unsubscribe = onSnapshot(
-          q,
-          (snapshot) => {
-            const vehiculos = snapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                id: doc.id,
-                ...data,
-                horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-                horaSalida: data['horaSalida']?.toDate()
-              } as Vehiculo;
-            });
-            
-            this.ngZone.run(() => {
-              observer.next(vehiculos);
-            });
-          },
-          (error) => {
-            this.ngZone.run(() => {
-              observer.error(error);
-            });
-          }
-        );
-      });
+          // Ordenar por hora de entrada descendente
+          vehiculos.sort((a, b) => b.horaEntrada.getTime() - a.horaEntrada.getTime());
+          
+          observer.next(vehiculos);
+        },
+        (error) => observer.error(error)
+      );
 
-      return () => {
-        if (unsubscribe) {
-          unsubscribe();
-        }
-      };
+      return () => unsubscribe();
     });
   }
 
   /**
-   * Obtiene vehículos que están dentro (versión promesa)
+   * ✅ Versión Promise para obtener vehículos dentro
    */
   async obtenerVehiculosDentroPromise(): Promise<Vehiculo[]> {
     try {
       const q = query(
         this.coleccion,
-        where('estado', '==', EstadoVehiculo.DENTRO),
-        orderBy('horaEntrada', 'desc')
+        where('estado', '==', EstadoVehiculo.DENTRO)
       );
+      
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
+      const vehiculos = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
-          ...data,
+          placa: data['placa'],
+          propietario: data['propietario'],
+          tipo: data['tipo'],
+          estado: data['estado'],
+          espacioNumero: data['espacioNumero'],
           horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-          horaSalida: data['horaSalida']?.toDate()
+          horaSalida: data['horaSalida']?.toDate() || null
         } as Vehiculo;
       });
+
+      vehiculos.sort((a, b) => b.horaEntrada.getTime() - a.horaEntrada.getTime());
+      return vehiculos;
     } catch (error) {
       console.error('Error al obtener vehículos:', error);
       return [];
@@ -222,74 +240,7 @@ export class VehiculosServicio {
   }
 
   /**
-   * Obtiene el historial completo de vehículos con filtros opcionales
-   */
-  async obtenerHistorial(fechaInicio?: Date, fechaFin?: Date, tipo?: TipoVehiculo): Promise<Vehiculo[]> {
-    try {
-      let q = query(this.coleccion, orderBy('horaEntrada', 'desc'));
-      
-      const snapshot = await getDocs(q);
-      let vehiculos = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-          horaSalida: data['horaSalida']?.toDate()
-        } as Vehiculo;
-      });
-
-      // Filtrar por fecha y tipo en el cliente
-      if (fechaInicio) {
-        vehiculos = vehiculos.filter(v => v.horaEntrada >= fechaInicio);
-      }
-      if (fechaFin) {
-        const fechaFinAjustada = new Date(fechaFin);
-        fechaFinAjustada.setHours(23, 59, 59, 999);
-        vehiculos = vehiculos.filter(v => v.horaEntrada <= fechaFinAjustada);
-      }
-      if (tipo) {
-        vehiculos = vehiculos.filter(v => v.tipo === tipo);
-      }
-
-      return vehiculos;
-    } catch (error) {
-      console.error('Error al obtener historial:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Busca vehículos por placa (historial completo)
-   */
-  async buscarPorPlaca(placa: string): Promise<Vehiculo[]> {
-    try {
-      const placaUpper = placa.toUpperCase().trim();
-      
-      const q = query(
-        this.coleccion,
-        where('placa', '==', placaUpper),
-        orderBy('horaEntrada', 'desc')
-      );
-      
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-          horaSalida: data['horaSalida']?.toDate()
-        } as Vehiculo;
-      });
-    } catch (error) {
-      console.error('Error al buscar por placa:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Busca un vehículo activo por placa (que está dentro)
+   * ✅ Busca un vehículo activo por placa
    */
   async buscarVehiculoActivoPorPlaca(placa: string): Promise<Vehiculo | null> {
     try {
@@ -304,12 +255,17 @@ export class VehiculosServicio {
       const snapshot = await getDocs(q);
       
       if (!snapshot.empty) {
-        const data = snapshot.docs[0].data();
+        const doc = snapshot.docs[0];
+        const data = doc.data();
         return {
-          id: snapshot.docs[0].id,
-          ...data,
+          id: doc.id,
+          placa: data['placa'],
+          propietario: data['propietario'],
+          tipo: data['tipo'],
+          estado: data['estado'],
+          espacioNumero: data['espacioNumero'],
           horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-          horaSalida: data['horaSalida']?.toDate()
+          horaSalida: data['horaSalida']?.toDate() || null
         } as Vehiculo;
       }
       
@@ -321,62 +277,42 @@ export class VehiculosServicio {
   }
 
   /**
-   * Genera estadísticas de uso del estacionamiento
+   * ✅ Busca vehículos por placa (historial completo)
    */
-  async obtenerEstadisticas(fechaInicio: Date, fechaFin: Date) {
-    const vehiculos = await this.obtenerHistorial(fechaInicio, fechaFin);
-    
-    const totalVehiculos = vehiculos.length;
-    
-    // Contar por tipo
-    const porTipo = vehiculos.reduce((acc, v) => {
-      const tipo = v.tipo as string;
-      acc[tipo] = (acc[tipo] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  async buscarPorPlaca(placa: string): Promise<Vehiculo[]> {
+    try {
+      const placaUpper = placa.toUpperCase().trim();
+      
+      const q = query(
+        this.coleccion,
+        where('placa', '==', placaUpper)
+      );
+      
+      const snapshot = await getDocs(q);
+      const vehiculos = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          placa: data['placa'],
+          propietario: data['propietario'],
+          tipo: data['tipo'],
+          estado: data['estado'],
+          espacioNumero: data['espacioNumero'],
+          horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+          horaSalida: data['horaSalida']?.toDate() || null
+        } as Vehiculo;
+      });
 
-    // Calcular duración promedio (solo para vehículos que ya salieron)
-    const duracionesEnMinutos = vehiculos
-      .filter(v => v.horaSalida)
-      .map(v => (v.horaSalida!.getTime() - v.horaEntrada.getTime()) / 60000);
-    
-    const duracionPromedio = duracionesEnMinutos.length > 0
-      ? duracionesEnMinutos.reduce((a, b) => a + b, 0) / duracionesEnMinutos.length
-      : 0;
-
-    // Contar vehículos por día
-    const porDia = vehiculos.reduce((acc, v) => {
-      const fecha = v.horaEntrada.toLocaleDateString('es-PE');
-      acc[fecha] = (acc[fecha] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Calcular pico de ocupación
-    const ocupacionPorHora = vehiculos.reduce((acc, v) => {
-      const hora = v.horaEntrada.getHours();
-      acc[hora] = (acc[hora] || 0) + 1;
-      return acc;
-    }, {} as Record<number, number>);
-
-    const horaPico = Object.entries(ocupacionPorHora).reduce((max, [hora, cantidad]) => 
-      cantidad > max.cantidad ? { hora: parseInt(hora), cantidad } : max,
-      { hora: 0, cantidad: 0 }
-    );
-
-    return {
-      totalVehiculos,
-      porTipo,
-      duracionPromedioMinutos: Math.round(duracionPromedio),
-      duracionPromedioHoras: (duracionPromedio / 60).toFixed(2),
-      porDia,
-      horaPico,
-      vehiculosDentro: vehiculos.filter(v => v.estado === EstadoVehiculo.DENTRO).length,
-      vehiculosFuera: vehiculos.filter(v => v.estado === EstadoVehiculo.FUERA).length
-    };
+      vehiculos.sort((a, b) => b.horaEntrada.getTime() - a.horaEntrada.getTime());
+      return vehiculos;
+    } catch (error) {
+      console.error('Error al buscar por placa:', error);
+      return [];
+    }
   }
 
   /**
-   * Calcula el costo de estacionamiento
+   * ✅ Calcula el costo de estacionamiento
    */
   calcularCosto(horaEntrada: Date, horaSalida: Date): number {
     const milisegundos = horaSalida.getTime() - horaEntrada.getTime();

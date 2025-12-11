@@ -1,21 +1,18 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
+import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
+import { EspaciosServicio } from '../../compartido/servicios/espacios.servicio';
+import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio';
+import { Vehiculo, TipoVehiculo, EstadoVehiculo } from '../../compartido/modelos/vehiculo.modelo';
 
-interface Vehiculo {
-  espacio: number;
-  columna: number;
-  placa: string;
-  propietario: string;
-  tipo: string;
-  horaEntrada: string;
-  horaSalida?: string;
+interface VehiculoExtendido extends Vehiculo {
   duracion?: string;
-  estado: 'activo' | 'finalizado';
 }
 
-interface Espacio {
+interface EspacioUI {
   numero: number;
   ocupado: boolean;
   placa?: string;
@@ -29,14 +26,18 @@ interface Espacio {
   templateUrl: './vehiculos.html',
   styleUrls: ['./vehiculos.css'],
 })
-export class Vehiculos implements OnInit {
+export class Vehiculos implements OnInit, OnDestroy {
+  private vehiculosServicio = inject(VehiculosServicio);
+  private espaciosServicio = inject(EspaciosServicio);
+  private authServicio = inject(AutenticacionServicio);
+  private router = inject(Router);
+  private destroy$ = new Subject<void>();
 
-  vehiculos: Vehiculo[] = [];
-  espacios: Espacio[] = [];
-  totalEspacios: number = 20;
-  adminName: string = 'Admin';
-
-  // Estadísticas
+  // Listas principales
+  vehiculos: VehiculoExtendido[] = [];
+  espaciosUI: EspacioUI[] = [];
+  
+  // Estadísticas en tiempo real
   espaciosLibres: number = 20;
   espaciosOcupados: number = 0;
   espaciosTotal: number = 20;
@@ -45,335 +46,384 @@ export class Vehiculos implements OnInit {
   tiempoPromedio: string = '-';
   porcentajeOcupacion: number = 0;
 
-  constructor(private router: Router) { }
+  // Estado del componente
+  cargando: boolean = true;
+  procesando: boolean = false;
+  filtroActual: 'todos' | 'activos' = 'todos';
+
+  // Tipos de vehículos
+  tiposVehiculo = Object.values(TipoVehiculo);
 
   ngOnInit(): void {
-    console.log('🚀 Vehiculos component iniciado');
+    console.log('🚀 Componente Vehículos iniciado');
     
     // Verificar autenticación
-    const isLoggedIn = localStorage.getItem('adminLoggedIn');
-    console.log('🔐 Estado de login:', isLoggedIn);
-    
-    if (isLoggedIn !== 'true') {
-      console.log('❌ No autenticado, redirigiendo a login');
+    if (!this.authServicio.estaAutenticado()) {
+      console.log('❌ No autenticado, redirigiendo...');
       this.router.navigate(['/login']);
       return;
     }
 
-    // Obtener nombre de admin
-    this.adminName = localStorage.getItem('adminUsername') || 'Admin';
-    console.log('👤 Admin:', this.adminName);
+    // ✅ CORRECCIÓN: Inyectar espaciosServicio en vehiculosServicio
+    this.vehiculosServicio.setEspaciosServicio(this.espaciosServicio);
 
-    // Inicializar espacios
-    this.inicializarEspacios();
+    // Inicializar espacios UI
+    this.inicializarEspaciosUI();
 
-    // Cargar vehículos
-    this.cargarVehiculos();
-    this.actualizarEstadisticas();
-    this.actualizarGridEspacios();
+    // Cargar datos en tiempo real
+    this.cargarDatosEnTiempoReal();
   }
 
-  inicializarEspacios(): void {
-    this.espacios = [];
-    for (let i = 1; i <= this.totalEspacios; i++) {
-      this.espacios.push({
+  ngOnDestroy(): void {
+    console.log('🔌 Destruyendo componente Vehículos');
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * ✅ Inicializa la estructura de espacios para la UI
+   */
+  inicializarEspaciosUI(): void {
+    this.espaciosUI = [];
+    for (let i = 1; i <= 20; i++) {
+      this.espaciosUI.push({
         numero: i,
-        ocupado: false,
-        placa: undefined,
-        vehiculo: undefined
+        ocupado: false
       });
     }
-    console.log('✅ Espacios inicializados:', this.espacios.length);
+    console.log('✅ Espacios UI inicializados:', this.espaciosUI.length);
   }
 
-  actualizarGridEspacios(): void {
-    // Resetear todos los espacios
-    this.espacios.forEach(espacio => {
-      espacio.ocupado = false;
-      espacio.placa = undefined;
-      espacio.vehiculo = undefined;
-    });
+  /**
+   * ✅ CORREGIDO: Carga todos los datos en tiempo real desde Firebase
+   */
+  cargarDatosEnTiempoReal(): void {
+    console.log('📡 Iniciando suscripciones en tiempo real...');
 
-    // Marcar espacios ocupados
-    this.vehiculos.filter(v => v.estado === 'activo').forEach(vehiculo => {
-      const espacio = this.espacios.find(e => e.numero === vehiculo.espacio);
-      if (espacio) {
-        espacio.ocupado = true;
-        espacio.placa = vehiculo.placa;
-        espacio.vehiculo = vehiculo;
-      }
-    });
+    // 1. Suscribirse a TODOS los vehículos
+    this.vehiculosServicio.obtenerVehiculos()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (vehiculos) => {
+          console.log('🚗 Vehículos recibidos:', vehiculos.length);
+          
+          // Procesar vehículos con duración calculada
+          this.vehiculos = vehiculos.map(v => {
+            const vehiculoExtendido: VehiculoExtendido = { ...v };
+            
+            if (v.horaSalida && v.horaEntrada) {
+              vehiculoExtendido.duracion = this.calcularDuracion(
+                v.horaEntrada,
+                v.horaSalida
+              );
+            }
+            
+            return vehiculoExtendido;
+          });
 
-    console.log('🔄 Grid de espacios actualizado');
+          // Actualizar estadísticas
+          this.actualizarEstadisticas();
+          this.cargando = false;
+        },
+        error: (error) => {
+          console.error('❌ Error al cargar vehículos:', error);
+          this.cargando = false;
+        }
+      });
+
+    // 2. Suscribirse a espacios con vehículos (para el grid visual)
+    this.espaciosServicio.obtenerEspaciosConVehiculos()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (espacios) => {
+          console.log('🅿️ Espacios actualizados:', espacios.length);
+          
+          this.espaciosUI = espacios.map(espacio => ({
+            numero: espacio.numero,
+            ocupado: espacio.ocupado,
+            placa: espacio.vehiculo?.placa,
+            vehiculo: espacio.vehiculo
+          }));
+        },
+        error: (error) => {
+          console.error('❌ Error al cargar espacios:', error);
+        }
+      });
+
+    // 3. Suscribirse al estado general
+    this.espaciosServicio.obtenerEstadoEstacionamiento()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (estado) => {
+          this.espaciosTotal = estado.espaciosTotales;
+          this.espaciosOcupados = estado.espaciosOcupados;
+          this.espaciosLibres = estado.espaciosLibres;
+          this.porcentajeOcupacion = estado.porcentajeOcupacion;
+          
+          console.log('📊 Estado actualizado:', estado);
+        },
+        error: (error) => {
+          console.error('❌ Error al cargar estado:', error);
+        }
+      });
   }
 
-  cargarVehiculos(): void {
-    const stored = localStorage.getItem('vehiculos');
-    console.log('📦 Datos en localStorage:', stored);
-    
-    if (stored) {
-      this.vehiculos = JSON.parse(stored);
-      console.log('✅ Vehículos cargados:', this.vehiculos.length);
-    } else {
-      console.log('ℹ️ No hay vehículos en localStorage');
-      this.vehiculos = [];
-    }
-  }
-
-  guardarVehiculos(): void {
-    localStorage.setItem('vehiculos', JSON.stringify(this.vehiculos));
-    console.log('💾 Vehículos guardados:', this.vehiculos.length);
-  }
-
-  registrarVehiculo(event: Event): void {
+  /**
+   * ✅ MEJORADO: Registra la entrada de un nuevo vehículo
+   */
+  async registrarVehiculo(event: Event): Promise<void> {
     event.preventDefault();
-    console.log('📝 Intentando registrar vehículo...');
+
+    if (this.procesando) {
+      console.log('⏳ Ya se está procesando un registro');
+      return;
+    }
 
     const form = event.target as HTMLFormElement;
     const placaInput = form.querySelector('#placa') as HTMLInputElement;
     const propietarioInput = form.querySelector('#propietario') as HTMLInputElement;
     const tipoSelect = form.querySelector('#tipo') as HTMLSelectElement;
 
-    const placa = placaInput?.value.trim() || '';
+    const placa = placaInput?.value.trim().toUpperCase() || '';
     const propietario = propietarioInput?.value.trim() || '';
-    const tipo = tipoSelect?.value || '';
+    const tipo = tipoSelect?.value as TipoVehiculo || '';
 
-    console.log('📋 Datos del formulario:', { placa, propietario, tipo });
-
+    // Validaciones
     if (!placa || !propietario || !tipo) {
-      console.log('❌ Campos incompletos');
       this.mostrarMensaje('⚠️ Todos los campos son obligatorios', 'error');
       return;
     }
 
-    // Verificar si el vehículo ya está registrado
-    const yaRegistrado = this.vehiculos.find(
-      v => v.placa.toUpperCase() === placa.toUpperCase() && v.estado === 'activo'
-    );
-
-    if (yaRegistrado) {
-      console.log('❌ Vehículo ya registrado');
-      this.mostrarMensaje('🚫 Este vehículo ya está registrado en el estacionamiento', 'error');
-      return;
-    }
-
-    const espacioLibre = this.buscarEspacioLibre();
-    console.log('🅿️ Espacio asignado:', espacioLibre);
-
-    if (espacioLibre === -1) {
-      console.log('❌ No hay espacios disponibles');
-      this.mostrarMensaje('🚫 No hay espacios disponibles', 'error');
-      return;
-    }
-
-    // Calcular columna (4 columnas de 5 espacios cada una)
-    const columna = Math.ceil(espacioLibre / 5);
-
-    const nuevoVehiculo: Vehiculo = {
-      espacio: espacioLibre,
-      columna: columna,
-      placa: placa.toUpperCase(),
-      propietario,
-      tipo,
-      horaEntrada: new Date().toISOString(),
-      estado: 'activo'
-    };
-
-    console.log('✅ Nuevo vehículo:', nuevoVehiculo);
-
-    this.vehiculos.push(nuevoVehiculo);
-    this.guardarVehiculos();
-    this.actualizarEstadisticas();
-    this.actualizarGridEspacios();
+    // Verificar si el vehículo ya está dentro
+    const vehiculoActivo = await this.vehiculosServicio.buscarVehiculoActivoPorPlaca(placa);
     
-    form.reset();
-    this.mostrarMensaje(`✅ Vehículo registrado en E-${String(espacioLibre).padStart(2, '0')} (Columna ${columna})`, 'success');
-    console.log('✅ Registro completado');
+    if (vehiculoActivo) {
+      this.mostrarMensaje(
+        `🚫 El vehículo ${placa} ya está en el estacionamiento (Espacio E-${String(vehiculoActivo.espacioNumero).padStart(2, '0')})`,
+        'error'
+      );
+      return;
+    }
+
+    this.procesando = true;
+
+    try {
+      console.log('💾 Registrando vehículo en Firebase...');
+      
+      const vehiculoId = await this.vehiculosServicio.registrarEntrada({
+        placa,
+        propietario,
+        tipo
+      });
+
+      console.log('✅ Vehículo registrado con ID:', vehiculoId);
+      
+      // Esperar un momento para que Firebase actualice
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Obtener el vehículo recién registrado
+      const vehiculosActuales = await this.vehiculosServicio.obtenerVehiculosDentroPromise();
+      const vehiculoRegistrado = vehiculosActuales.find(v => v.id === vehiculoId);
+      
+      if (vehiculoRegistrado && vehiculoRegistrado.espacioNumero) {
+        this.mostrarMensaje(
+          `✅ Vehículo ${placa} registrado en espacio E-${String(vehiculoRegistrado.espacioNumero).padStart(2, '0')}`,
+          'success'
+        );
+      } else {
+        this.mostrarMensaje(`✅ Vehículo ${placa} registrado correctamente`, 'success');
+      }
+
+      // Limpiar formulario
+      form.reset();
+      
+    } catch (error: any) {
+      console.error('❌ Error al registrar vehículo:', error);
+      this.mostrarMensaje(
+        error.message || 'Error al registrar el vehículo',
+        'error'
+      );
+    } finally {
+      this.procesando = false;
+    }
   }
 
-  finalizarVehiculo(vehiculo: Vehiculo): void {
-    console.log('🏁 Finalizando vehículo:', vehiculo.placa);
-    
+  /**
+   * ✅ MEJORADO: Registra la salida de un vehículo
+   */
+  async finalizarVehiculo(vehiculo: VehiculoExtendido): Promise<void> {
+    if (!vehiculo.id) {
+      console.error('❌ Vehículo sin ID');
+      return;
+    }
+
     const confirmar = window.confirm(
-      `¿Registrar salida del vehículo ${vehiculo.placa}?`
+      `¿Registrar salida del vehículo ${vehiculo.placa}?\n\nEspacio: E-${String(vehiculo.espacioNumero).padStart(2, '0')}`
     );
 
-    if (!confirmar) {
-      return;
+    if (!confirmar) return;
+
+    this.procesando = true;
+
+    try {
+      console.log('🚀 Registrando salida del vehículo:', vehiculo.placa);
+      
+      await this.vehiculosServicio.registrarSalida(vehiculo.id);
+      
+      const duracion = this.calcularDuracion(vehiculo.horaEntrada, new Date());
+      const costo = this.vehiculosServicio.calcularCosto(vehiculo.horaEntrada, new Date());
+      
+      console.log('✅ Salida registrada exitosamente');
+      
+      this.mostrarMensaje(
+        `✅ Salida registrada para ${vehiculo.placa}\n` +
+        `Duración: ${duracion}\n` +
+        `Costo: S/. ${costo.toFixed(2)}`,
+        'success'
+      );
+      
+    } catch (error) {
+      console.error('❌ Error al registrar salida:', error);
+      this.mostrarMensaje('Error al registrar la salida del vehículo', 'error');
+    } finally {
+      this.procesando = false;
     }
-
-    vehiculo.horaSalida = new Date().toISOString();
-    vehiculo.duracion = this.calcularDuracion(
-      new Date(vehiculo.horaEntrada), 
-      new Date(vehiculo.horaSalida)
-    );
-    vehiculo.estado = 'finalizado';
-    
-    this.guardarVehiculos();
-    this.actualizarEstadisticas();
-    this.actualizarGridEspacios();
-    
-    this.mostrarMensaje(
-      `🚗 Salida registrada para ${vehiculo.placa}. Duración: ${vehiculo.duracion}`, 
-      'success'
-    );
-    
-    console.log('✅ Vehículo finalizado');
   }
 
-  mostrarDetallesEspacio(espacio: Espacio): void {
-    if (!espacio.vehiculo) return;
+  /**
+   * ✅ Muestra detalles de un espacio al hacer clic
+   */
+  mostrarDetallesEspacio(espacio: EspacioUI): void {
+    if (!espacio.ocupado || !espacio.vehiculo) {
+      return;
+    }
 
     const v = espacio.vehiculo;
-    const tiempoActual = this.calcularTiempoActual(new Date(v.horaEntrada));
+    const tiempoActual = this.calcularTiempoTranscurrido(v.horaEntrada);
+    const costoActual = this.vehiculosServicio.calcularCosto(v.horaEntrada, new Date());
     
-    const mensaje = `📋 Detalles del Espacio E-${String(v.espacio).padStart(2, '0')}
+    const mensaje = `
+🅿️ ESPACIO E-${String(espacio.numero).padStart(2, '0')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🚗 Placa: ${v.placa}
 👤 Propietario: ${v.propietario}
 🚙 Tipo: ${v.tipo}
-📍 Columna: ${v.columna}
 🕐 Entrada: ${this.formatearFecha(v.horaEntrada)}
-⏱️ Tiempo: ${tiempoActual}`;
+⏱️ Tiempo: ${tiempoActual}
+💰 Costo actual: S/. ${costoActual.toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `.trim();
 
     alert(mensaje);
   }
 
-  buscarEspacioLibre(): number {
-    for (let i = 1; i <= this.totalEspacios; i++) {
-      const ocupado = this.vehiculos.find(v => v.espacio === i && v.estado === 'activo');
-      if (!ocupado) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
+  /**
+   * ✅ Calcula la duración entre dos fechas
+   */
   calcularDuracion(entrada: Date, salida: Date): string {
-    const diff = salida.getTime() - entrada.getTime();
-    const segundos = Math.floor(diff / 1000);
+    const milisegundos = salida.getTime() - entrada.getTime();
+    
+    if (milisegundos < 0) return '0s';
+
+    const segundos = Math.floor(milisegundos / 1000);
     const minutos = Math.floor(segundos / 60);
     const horas = Math.floor(minutos / 60);
     const dias = Math.floor(horas / 24);
-    
-    const min = minutos % 60;
-    const h = horas % 24;
 
     if (dias > 0) {
-      return `${dias}d ${h}h ${min}m`;
-    } else if (horas > 0) {
-      return `${horas}h ${min}m`;
-    } else if (minutos > 0) {
-      return `${minutos}m`;
-    } else {
-      return `${segundos}s`;
+      const h = horas % 24;
+      const m = minutos % 60;
+      return `${dias}d ${h}h ${m}m`;
     }
+    
+    if (horas > 0) {
+      const m = minutos % 60;
+      return `${horas}h ${m}m`;
+    }
+    
+    if (minutos > 0) {
+      return `${minutos}m`;
+    }
+    
+    return `${segundos}s`;
   }
 
-  calcularTiempoActual(entrada: Date): string {
-    const ahora = new Date();
-    const duracion = this.calcularDuracion(entrada, ahora);
-    return `⏱️ ${duracion}`;
+  /**
+   * ✅ Calcula el tiempo transcurrido desde la entrada
+   */
+  calcularTiempoTranscurrido(entrada: Date): string {
+    return this.calcularDuracion(entrada, new Date());
   }
 
+  /**
+   * ✅ Actualiza las estadísticas basadas en los vehículos actuales
+   */
   actualizarEstadisticas(): void {
-    console.log('📊 Actualizando estadísticas...');
-    
-    const hoy = new Date().toDateString();
-    this.vehiculosHoy = this.vehiculos.filter(v => 
-      new Date(v.horaEntrada).toDateString() === hoy
-    ).length;
-    
-    this.vehiculosActivos = this.vehiculos.filter(v => v.estado === 'activo').length;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
 
-    this.espaciosOcupados = this.vehiculosActivos;
-    this.espaciosLibres = this.totalEspacios - this.espaciosOcupados;
-    this.espaciosTotal = this.totalEspacios;
+    // Vehículos de hoy
+    this.vehiculosHoy = this.vehiculos.filter(v => {
+      const fecha = new Date(v.horaEntrada);
+      fecha.setHours(0, 0, 0, 0);
+      return fecha.getTime() === hoy.getTime();
+    }).length;
+
+    // Vehículos activos
+    this.vehiculosActivos = this.vehiculos.filter(
+      v => v.estado === EstadoVehiculo.DENTRO
+    ).length;
 
     // Calcular tiempo promedio
-    const finalizados = this.vehiculos.filter(v => v.duracion);
-    
-    if (finalizados.length > 0) {
-      const duraciones = finalizados.map(v => {
-        const match = v.duracion!.match(/(?:(\d+)d\s*)?(?:(\d+)h\s*)?(?:(\d+)m)?/);
-        if (match) {
-          const dias = parseInt(match[1] || '0');
-          const horas = parseInt(match[2] || '0');
-          const minutos = parseInt(match[3] || '0');
-          return dias * 24 * 60 + horas * 60 + minutos;
-        }
-        return 0;
+    const finalizadosHoy = this.vehiculos.filter(v => {
+      if (!v.horaSalida) return false;
+      const fecha = new Date(v.horaEntrada);
+      fecha.setHours(0, 0, 0, 0);
+      return fecha.getTime() === hoy.getTime();
+    });
+
+    if (finalizadosHoy.length > 0) {
+      const duracionesMinutos = finalizadosHoy.map(v => {
+        if (!v.horaSalida) return 0;
+        const diff = v.horaSalida.getTime() - v.horaEntrada.getTime();
+        return Math.floor(diff / 60000);
       });
-      
-      const promedioMin = Math.floor(
-        duraciones.reduce((a, b) => a + b, 0) / duraciones.length
+
+      const promedioMinutos = Math.floor(
+        duracionesMinutos.reduce((a, b) => a + b, 0) / duracionesMinutos.length
       );
-      
-      const promHoras = Math.floor(promedioMin / 60);
-      const promMin = promedioMin % 60;
-      
-      this.tiempoPromedio = promHoras > 0 
-        ? `${promHoras}h ${promMin}m` 
-        : `${promMin}m`;
+
+      const horas = Math.floor(promedioMinutos / 60);
+      const minutos = promedioMinutos % 60;
+
+      this.tiempoPromedio = horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m`;
     } else {
       this.tiempoPromedio = '-';
     }
+  }
 
-    this.porcentajeOcupacion = Math.round(
-      (this.vehiculosActivos / this.totalEspacios) * 100
-    );
+  /**
+   * ✅ Formatea una fecha para mostrar
+   */
+  formatearFecha(fecha: Date | string): string {
+    const date = fecha instanceof Date ? fecha : new Date(fecha);
     
-    console.log('📊 Estadísticas:', {
-      hoy: this.vehiculosHoy,
-      activos: this.vehiculosActivos,
-      libres: this.espaciosLibres,
-      ocupados: this.espaciosOcupados,
-      promedio: this.tiempoPromedio,
-      ocupacion: this.porcentajeOcupacion + '%'
+    return date.toLocaleString('es-PE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
     });
   }
 
-  cerrarSesion(): void {
-    console.log('🚪 ===== CERRANDO SESIÓN =====');
-    
-    const confirmar = window.confirm('¿Estás seguro de que deseas cerrar sesión?');
-    
-    if (confirmar) {
-      localStorage.removeItem('adminLoggedIn');
-      localStorage.removeItem('adminUsername');
-      localStorage.removeItem('loginTime');
-      
-      console.log('🧹 localStorage limpiado');
-      console.log('🔄 Navegando a /login...');
-      
-      this.router.navigate(['/login'], { replaceUrl: true }).then(
-        (success) => {
-          console.log('✅ Navegación exitosa:', success);
-        },
-        (error) => {
-          console.error('❌ Error en navegación:', error);
-        }
-      );
-    }
-  }
-
-  irAInicio(): void {
-    console.log('🏠 Navegando a inicio...');
-    this.router.navigate(['/inicio']);
-  }
-
-  irAHistorial(): void {
-    console.log('📋 Navegando a historial...');
-    this.router.navigate(['/historial']);
-  }
-
-  irAEstadisticas(): void {
-    console.log('📊 Navegando a estadísticas...');
-    this.router.navigate(['/estadisticas']);
-  }
-
-  private mostrarMensaje(texto: string, tipo: 'success' | 'error'): void {
-    console.log('📢 Mensaje:', tipo, '-', texto);
+  /**
+   * ✅ Muestra un mensaje temporal
+   */
+  mostrarMensaje(texto: string, tipo: 'success' | 'error'): void {
     const mensajeDiv = document.getElementById('mensaje');
     if (mensajeDiv) {
       mensajeDiv.textContent = texto;
@@ -382,20 +432,21 @@ export class Vehiculos implements OnInit {
 
       setTimeout(() => {
         mensajeDiv.style.display = 'none';
-      }, 4000);
+      }, 5000);
     }
   }
 
-  formatearFecha(fecha: string): string {
-    const date = new Date(fecha);
-    return date.toLocaleString('es-PE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
-    });
+  /**
+   * ✅ Obtiene la clase CSS para un espacio
+   */
+  obtenerClaseEspacio(espacio: EspacioUI): string {
+    return espacio.ocupado ? 'space-card ocupado' : 'space-card libre';
+  }
+
+  /**
+   * ✅ Obtiene el texto para mostrar en un espacio
+   */
+  obtenerTextoEspacio(espacio: EspacioUI): string {
+    return espacio.ocupado ? 'OCUPADO' : 'LIBRE';
   }
 }

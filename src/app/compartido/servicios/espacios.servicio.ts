@@ -1,4 +1,4 @@
-import { Injectable, inject, NgZone } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -20,7 +20,6 @@ import { Vehiculo, EstadoVehiculo } from '../modelos/vehiculo.modelo';
 })
 export class EspaciosServicio {
   private firestore = inject(Firestore);
-  private ngZone = inject(NgZone);
   private coleccionEspacios = collection(this.firestore, 'espacios');
   private coleccionVehiculos = collection(this.firestore, 'vehiculos');
 
@@ -29,111 +28,95 @@ export class EspaciosServicio {
   }
 
   /**
-   * Inicializa los espacios en Firestore si no existen
+   * ✅ Inicializa los espacios en Firestore si no existen
    */
   private async inicializarEspacios(): Promise<void> {
     try {
       const configDoc = await getDoc(doc(this.firestore, 'configuracion/espacios'));
       
       if (!configDoc.exists()) {
-        // Crear 20 espacios por defecto
+        console.log('🏗️ Inicializando espacios en Firestore...');
         const TOTAL_ESPACIOS = 20;
         
         for (let i = 1; i <= TOTAL_ESPACIOS; i++) {
           const espacio: Espacio = {
             numero: i,
-            tipo: i <= 15 ? 'Auto' : 'Camioneta', // Primeros 15 para autos, resto para camionetas
+            tipo: i <= 15 ? 'Auto' : 'Camioneta',
             ocupado: false
           };
           
           await setDoc(doc(this.firestore, `espacios/${i}`), espacio);
         }
 
-        // Guardar configuración
         await setDoc(doc(this.firestore, 'configuracion/espacios'), {
           total: TOTAL_ESPACIOS,
           inicializado: true,
           fechaCreacion: new Date()
         });
 
-        console.log('✅ Espacios inicializados en Firestore');
+        console.log('✅ Espacios inicializados correctamente');
       }
     } catch (error) {
-      console.error('Error al inicializar espacios:', error);
+      console.error('❌ Error al inicializar espacios:', error);
     }
   }
 
   /**
-   * Obtiene todos los espacios en tiempo real con información de vehículos
-   * CORREGIDO: Usa NgZone para evitar warnings
+   * ✅ CORREGIDO: Obtiene todos los espacios con información de vehículos en tiempo real
    */
   obtenerEspaciosConVehiculos(): Observable<any[]> {
     const espacios$ = new Observable<Espacio[]>(observer => {
-      let unsubscribe: Unsubscribe;
-      
-      this.ngZone.runOutsideAngular(() => {
-        unsubscribe = onSnapshot(
-          this.coleccionEspacios,
-          (snapshot) => {
-            const espacios = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            } as Espacio));
-            
-            this.ngZone.run(() => {
-              observer.next(espacios);
-            });
-          },
-          (error) => {
-            this.ngZone.run(() => {
-              observer.error(error);
-            });
-          }
-        );
-      });
-      
-      return () => {
-        if (unsubscribe) {
-          unsubscribe();
+      const unsubscribe = onSnapshot(
+        this.coleccionEspacios,
+        (snapshot) => {
+          const espacios = snapshot.docs.map(doc => ({
+            id: doc.id,
+            numero: doc.data()['numero'],
+            tipo: doc.data()['tipo'],
+            ocupado: doc.data()['ocupado'] || false,
+            vehiculoId: doc.data()['vehiculoId']
+          } as Espacio));
+          
+          observer.next(espacios);
+        },
+        (error) => {
+          console.error('❌ Error en snapshot de espacios:', error);
+          observer.error(error);
         }
-      };
+      );
+      
+      return () => unsubscribe();
     });
     
     const vehiculosDentro$ = new Observable<Vehiculo[]>(observer => {
       const q = query(this.coleccionVehiculos, where('estado', '==', EstadoVehiculo.DENTRO));
-      let unsubscribe: Unsubscribe;
       
-      this.ngZone.runOutsideAngular(() => {
-        unsubscribe = onSnapshot(
-          q,
-          (snapshot) => {
-            const vehiculos = snapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                id: doc.id,
-                ...data,
-                horaEntrada: data['horaEntrada']?.toDate() || new Date(),
-                horaSalida: data['horaSalida']?.toDate()
-              } as Vehiculo;
-            });
-            
-            this.ngZone.run(() => {
-              observer.next(vehiculos);
-            });
-          },
-          (error) => {
-            this.ngZone.run(() => {
-              observer.error(error);
-            });
-          }
-        );
-      });
-      
-      return () => {
-        if (unsubscribe) {
-          unsubscribe();
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const vehiculos = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              placa: data['placa'],
+              propietario: data['propietario'],
+              tipo: data['tipo'],
+              estado: data['estado'],
+              espacioNumero: data['espacioNumero'],
+              horaEntrada: data['horaEntrada']?.toDate() || new Date(),
+              horaSalida: data['horaSalida']?.toDate() || null
+            } as Vehiculo;
+          });
+          
+          observer.next(vehiculos);
+        },
+        (error) => {
+          console.error('❌ Error en snapshot de vehículos dentro:', error);
+          observer.error(error);
         }
-      };
+      );
+      
+      return () => unsubscribe();
     });
 
     return combineLatest([espacios$, vehiculosDentro$]).pipe(
@@ -141,7 +124,6 @@ export class EspaciosServicio {
         return espacios
           .sort((a, b) => a.numero - b.numero)
           .map(espacio => {
-            // Buscar si hay un vehículo en este espacio
             const vehiculo = vehiculos.find(v => v.espacioNumero === espacio.numero);
             
             return {
@@ -162,7 +144,7 @@ export class EspaciosServicio {
   }
 
   /**
-   * Obtiene el estado general del estacionamiento en tiempo real
+   * ✅ Obtiene el estado general del estacionamiento en tiempo real
    */
   obtenerEstadoEstacionamiento(): Observable<EstadoEstacionamiento> {
     return this.obtenerEspaciosConVehiculos().pipe(
@@ -185,7 +167,7 @@ export class EspaciosServicio {
   }
 
   /**
-   * Obtiene un espacio específico
+   * ✅ Obtiene un espacio específico
    */
   async obtenerEspacio(numero: number): Promise<Espacio | null> {
     try {
@@ -193,7 +175,14 @@ export class EspaciosServicio {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Espacio;
+        const data = docSnap.data();
+        return { 
+          id: docSnap.id, 
+          numero: data['numero'],
+          tipo: data['tipo'],
+          ocupado: data['ocupado'] || false,
+          vehiculoId: data['vehiculoId']
+        } as Espacio;
       }
       return null;
     } catch (error) {
@@ -203,47 +192,65 @@ export class EspaciosServicio {
   }
 
   /**
-   * Marca un espacio como ocupado
+   * ✅ CORREGIDO: Marca un espacio como ocupado
    */
   async ocuparEspacio(numero: number, vehiculoId: string): Promise<void> {
     try {
+      console.log(`🔒 Ocupando espacio ${numero} con vehículo ${vehiculoId}`);
+      
       const docRef = doc(this.firestore, `espacios/${numero}`);
       await setDoc(docRef, {
+        numero: numero,
+        tipo: numero <= 15 ? 'Auto' : 'Camioneta',
         ocupado: true,
-        vehiculoId
+        vehiculoId: vehiculoId
       }, { merge: true });
+      
+      console.log(`✅ Espacio ${numero} marcado como ocupado`);
     } catch (error) {
-      console.error('Error al ocupar espacio:', error);
+      console.error('❌ Error al ocupar espacio:', error);
       throw error;
     }
   }
 
   /**
-   * Libera un espacio ocupado
+   * ✅ CORREGIDO: Libera un espacio ocupado
    */
   async liberarEspacio(numero: number): Promise<void> {
     try {
+      console.log(`🔓 Liberando espacio ${numero}`);
+      
       const docRef = doc(this.firestore, `espacios/${numero}`);
       await setDoc(docRef, {
+        numero: numero,
+        tipo: numero <= 15 ? 'Auto' : 'Camioneta',
         ocupado: false,
         vehiculoId: null
       }, { merge: true });
+      
+      console.log(`✅ Espacio ${numero} liberado`);
     } catch (error) {
-      console.error('Error al liberar espacio:', error);
+      console.error('❌ Error al liberar espacio:', error);
       throw error;
     }
   }
 
   /**
-   * Obtiene los espacios libres de un tipo específico
+   * ✅ Obtiene los espacios libres de un tipo específico
    */
   async obtenerEspaciosLibres(tipo?: string): Promise<Espacio[]> {
     try {
       const snapshot = await getDocs(this.coleccionEspacios);
-      let espacios = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Espacio));
+      let espacios = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          numero: data['numero'],
+          tipo: data['tipo'],
+          ocupado: data['ocupado'] || false,
+          vehiculoId: data['vehiculoId']
+        } as Espacio;
+      });
       
       let espaciosLibres = espacios.filter(e => !e.ocupado);
       

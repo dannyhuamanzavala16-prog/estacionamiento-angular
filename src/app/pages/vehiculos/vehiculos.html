@@ -1,6 +1,12 @@
 <!-- ===== CONTENIDO PRINCIPAL ===== -->
 <main>
 
+  <!-- INDICADOR DE CARGA -->
+  <div *ngIf="cargando" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p>Cargando datos desde Firebase...</p>
+  </div>
+
   <!-- ESTADO EN TIEMPO REAL -->
   <section class="parking-status">
     <div class="status-header">
@@ -15,94 +21,25 @@
         <div class="indicator total">
           📊 <span>{{ espaciosTotal }}</span> Total
         </div>
-        <button class="btn-refresh" (click)="actualizarEstadisticas()">🔄 Actualizar</button>
+        <button class="btn-refresh" (click)="actualizarEstadisticas()" [disabled]="procesando">
+          🔄 Actualizar
+        </button>
       </div>
     </div>
     
+    <!-- GRID DE ESPACIOS DINÁMICO -->
     <div class="spaces-grid">
-      <!-- Fila 1: E-01 a E-14 -->
-      <div class="space-card ocupado">
-        <div class="space-number">E-01</div>
-        <div class="space-label">OCUPADO</div>
-        <div class="space-placa">ACA-722</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-02</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-03</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-04</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-05</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-06</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-07</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-08</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-09</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-10</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-11</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-12</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-13</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-14</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      
-      <!-- Fila 2: E-15 a E-20 -->
-      <div class="space-card libre">
-        <div class="space-number">E-15</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-16</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-17</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-18</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-19</div>
-        <div class="space-label">LIBRE</div>
-      </div>
-      <div class="space-card libre">
-        <div class="space-number">E-20</div>
-        <div class="space-label">LIBRE</div>
+      <div
+        *ngFor="let espacio of espaciosUI"
+        [ngClass]="obtenerClaseEspacio(espacio)"
+        (click)="mostrarDetallesEspacio(espacio)"
+        [title]="espacio.ocupado ? 'Click para ver detalles' : 'Espacio disponible'"
+      >
+        <div class="space-number">E-{{ espacio.numero < 10 ? '0' + espacio.numero : espacio.numero }}</div>
+        <div class="space-label">{{ obtenerTextoEspacio(espacio) }}</div>
+        <div class="space-placa" *ngIf="espacio.ocupado && espacio.placa">
+          {{ espacio.placa }}
+        </div>
       </div>
     </div>
   </section>
@@ -116,34 +53,74 @@
       <form (submit)="registrarVehiculo($event)">
         <div class="form-group">
           <label for="placa">Placa del Vehículo *</label>
-          <input type="text" id="placa" placeholder="ABC-123" required>
+          <input 
+            type="text" 
+            id="placa" 
+            placeholder="ABC-123" 
+            required
+            [disabled]="procesando"
+            maxlength="10"
+            style="text-transform: uppercase;"
+          >
         </div>
         
         <div class="form-group">
           <label for="propietario">Propietario *</label>
-          <input type="text" id="propietario" placeholder="Juan Pérez" required>
+          <input 
+            type="text" 
+            id="propietario" 
+            placeholder="Juan Pérez" 
+            required
+            [disabled]="procesando"
+          >
         </div>
         
         <div class="form-group">
           <label for="tipo">Tipo de Vehículo *</label>
-          <select id="tipo" required>
+          <select id="tipo" required [disabled]="procesando">
             <option value="">Seleccionar tipo</option>
             <option value="Auto">Auto 🚗</option>
             <option value="Moto">Moto 🏍️</option>
             <option value="Camioneta">Camioneta 🚙</option>
             <option value="SUV">SUV 🚐</option>
+            <option value="Camión">Camión 🚚</option>
           </select>
         </div>
         
-        <button type="submit">✓ Registrar Entrada</button>
+        <button type="submit" [disabled]="procesando || espaciosLibres === 0">
+          <span *ngIf="!procesando">✔ Registrar Entrada</span>
+          <span *ngIf="procesando">⏳ Procesando...</span>
+        </button>
+
+        <div *ngIf="espaciosLibres === 0" class="alerta-sin-espacios">
+          ⚠️ No hay espacios disponibles
+        </div>
       </form>
       
       <div id="mensaje" class="mensaje" style="display: none;"></div>
     </section>
     
-    <!-- TABLA DE VEHÍCULOS -->
+    <!-- TABLA DE VEHÍCULOS EN TIEMPO REAL -->
     <section class="tabla">
-      <h2>🚗 Vehículos Registrados</h2>
+      <h2>🚗 Vehículos Registrados (Tiempo Real)</h2>
+      
+      <div class="filtros-rapidos">
+        <button 
+          class="filtro-btn activo" 
+          (click)="filtroActual = 'todos'"
+          [class.activo]="filtroActual === 'todos'"
+        >
+          Todos ({{ vehiculos.length }})
+        </button>
+        <button 
+          class="filtro-btn" 
+          (click)="filtroActual = 'activos'"
+          [class.activo]="filtroActual === 'activos'"
+        >
+          Activos ({{ vehiculosActivos }})
+        </button>
+      </div>
+
       <div class="table-container">
         <table>
           <thead>
@@ -160,35 +137,55 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngIf="vehiculos.length === 0">
+            <tr *ngIf="vehiculos.length === 0 && !cargando">
               <td colspan="9" style="text-align:center; padding: 2rem; color: #64748b;">
-                No hay vehículos registrados actualmente.
+                📭 No hay vehículos registrados actualmente.
               </td>
             </tr>
+            
+            <tr *ngIf="cargando">
+              <td colspan="9" style="text-align:center; padding: 2rem;">
+                <div class="loading-spinner-small"></div>
+                Cargando vehículos...
+              </td>
+            </tr>
+
             <tr *ngFor="let vehiculo of vehiculos">
               <td>
-                <div class="espacio-col">E-{{ vehiculo.espacio < 10 ? '0' + vehiculo.espacio : vehiculo.espacio }}</div>
-                <div class="espacio-num">Col {{ vehiculo.columna }}</div>
+                <div class="espacio-col">
+                  E-{{ vehiculo.espacioNumero ? (vehiculo.espacioNumero < 10 ? '0' + vehiculo.espacioNumero : vehiculo.espacioNumero) : '-' }}
+                </div>
               </td>
-              <td><span class="placa-badge">{{ vehiculo.placa }}</span></td>
+              <td>
+                <span class="placa-badge">{{ vehiculo.placa }}</span>
+              </td>
               <td>{{ vehiculo.propietario }}</td>
               <td>{{ vehiculo.tipo }}</td>
               <td>{{ formatearFecha(vehiculo.horaEntrada) }}</td>
-              <td>{{ vehiculo.horaSalida ? formatearFecha(vehiculo.horaSalida) : '-' }}</td>
+              <td>
+                {{ vehiculo.horaSalida ? formatearFecha(vehiculo.horaSalida) : '-' }}
+              </td>
               <td>{{ vehiculo.duracion || '-' }}</td>
               <td>
-                <span [class]="vehiculo.estado === 'activo' ? 'badge-activo' : 'badge-finalizado'">
-                  {{ vehiculo.estado === 'activo' ? 'ACTIVO' : 'FINALIZADO' }}
+                <span [class]="vehiculo.estado === 'Dentro' ? 'badge-activo' : 'badge-finalizado'">
+                  {{ vehiculo.estado === 'Dentro' ? 'ACTIVO' : 'FINALIZADO' }}
                 </span>
               </td>
               <td>
                 <button 
-                  *ngIf="vehiculo.estado === 'activo'" 
+                  *ngIf="vehiculo.estado === 'Dentro'" 
                   (click)="finalizarVehiculo(vehiculo)"
-                  class="btn-salida">
+                  class="btn-salida"
+                  [disabled]="procesando"
+                >
                   🚀 Registrar Salida
                 </button>
-                <span *ngIf="vehiculo.estado === 'finalizado'" style="color: #64748b; font-size: 0.875rem;">✓ Completado</span>
+                <span 
+                  *ngIf="vehiculo.estado === 'Fuera'" 
+                  style="color: #64748b; font-size: 0.875rem;"
+                >
+                  ✓ Completado
+                </span>
               </td>
             </tr>
           </tbody>
@@ -197,29 +194,36 @@
     </section>
   </div>
 
-  <!-- ESTADÍSTICAS RÁPIDAS -->
+  <!-- ESTADÍSTICAS RÁPIDAS EN TIEMPO REAL -->
   <section class="quick-stats">
-    <h2>📊 Estadísticas de Hoy</h2>
+    <h2>📊 Estadísticas de Hoy (Actualización Automática)</h2>
     
     <div class="stats-grid">
       <div class="stat-card">
+        <div class="stat-icon">🚗</div>
         <div class="stat-label">Vehículos Hoy</div>
         <div class="stat-value">{{ vehiculosHoy }}</div>
       </div>
 
       <div class="stat-card">
+        <div class="stat-icon">✅</div>
         <div class="stat-label">Activos Ahora</div>
         <div class="stat-value">{{ vehiculosActivos }}</div>
+        <div class="stat-sublabel">{{ porcentajeOcupacion }}% ocupación</div>
       </div>
 
       <div class="stat-card">
+        <div class="stat-icon">⏱️</div>
         <div class="stat-label">Tiempo Promedio</div>
         <div class="stat-value">{{ tiempoPromedio }}</div>
+        <div class="stat-sublabel">Duración estancia</div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-label">Ocupación</div>
-        <div class="stat-value">{{ porcentajeOcupacion }}%</div>
+        <div class="stat-icon">🅿️</div>
+        <div class="stat-label">Espacios Libres</div>
+        <div class="stat-value">{{ espaciosLibres }}</div>
+        <div class="stat-sublabel">de {{ espaciosTotal }} total</div>
       </div>
     </div>
   </section>
