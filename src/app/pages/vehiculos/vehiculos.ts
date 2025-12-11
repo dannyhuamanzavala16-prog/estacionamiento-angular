@@ -2,8 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { FooterComponent } from '../../compartido/componentes/footer/footer';
-import { AdminHeaderComponent } from '../../compartido/componentes/admin-header/admin-header';
 
 interface Vehiculo {
   espacio: number;
@@ -27,7 +25,7 @@ interface Espacio {
 @Component({
   selector: 'app-vehiculos',
   standalone: true,
-  imports: [CommonModule, FormsModule, AdminHeaderComponent, FooterComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './vehiculos.html',
   styleUrls: ['./vehiculos.css'],
 })

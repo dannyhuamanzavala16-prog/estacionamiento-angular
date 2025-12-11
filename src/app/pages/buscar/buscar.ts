@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
 import { Vehiculo } from '../../compartido/modelos/vehiculo.modelo';
-import { GuardiaHeaderComponent } from '../../compartido/componentes/guardia-header/guardia-header';
-import { FooterComponent } from '../../compartido/componentes/footer/footer';
 
 interface HistorialBusqueda {
   placa: string;
@@ -14,7 +12,7 @@ interface HistorialBusqueda {
 @Component({
   selector: 'app-buscar',
   standalone: true,
-  imports: [CommonModule, FormsModule, GuardiaHeaderComponent, FooterComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './buscar.html',
   styleUrls: ['./buscar.css']
 })

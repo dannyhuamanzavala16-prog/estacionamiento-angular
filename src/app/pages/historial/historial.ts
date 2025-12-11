@@ -6,13 +6,11 @@ import { Subject, takeUntil } from 'rxjs';
 import { VehiculosServicio } from '../../compartido/servicios/vehiculos.servicio';
 import { AutenticacionServicio } from '../../compartido/servicios/autenticacion.servicio';
 import { Vehiculo } from '../../compartido/modelos/vehiculo.modelo';
-import { HeaderComponent } from '../../compartido/componentes/header/header';
-import { FooterComponent } from '../../compartido/componentes/footer/footer';
 
 @Component({
   selector: 'app-historial',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent, FooterComponent],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './historial.html',
   styleUrls: ['./historial.css']
 })
