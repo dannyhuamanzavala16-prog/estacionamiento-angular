@@ -36,4 +36,3 @@ export class PorcentajePipe implements PipeTransform {
         return `${porcentajeLimitado.toFixed(decimales)}%`;
     }
 }
-w

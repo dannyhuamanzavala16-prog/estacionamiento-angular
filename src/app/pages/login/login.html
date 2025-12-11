@@ -1,6 +1,6 @@
 <div class="login-container">
   <div class="login-card">
-    
+
     <!-- HEADER -->
     <div class="login-header">
       <div class="logo">🅿️</div>
@@ -9,29 +9,25 @@
     </div>
 
     <!-- MENSAJE -->
-    <div *ngIf="mensaje" 
-         class="message" 
-         [class.error]="mensajeTipo === 'error'"
-         [class.success]="mensajeTipo === 'success'">
+    <div *ngIf="mensaje" class="message" [class.error]="mensajeTipo === 'error'"
+      [class.success]="mensajeTipo === 'success'">
       {{ mensaje }}
     </div>
 
     <!-- FORMULARIO -->
-    <div class="login-form">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
       <div class="form-group">
         <label for="email">
           📧 Correo Electrónico
         </label>
         <div class="input-wrapper">
           <span class="input-icon">📧</span>
-          <input 
-            type="email" 
-            id="email" 
-            [value]="email"
-            (input)="onUsuarioChange($event)"
-            placeholder="usuario@ejemplo.com"
-            autocomplete="email"
-          >
+          <input type="email" id="email" formControlName="email" placeholder="usuario@ejemplo.com" autocomplete="email"
+            [class.invalid]="email?.invalid && email?.touched">
+        </div>
+        <div *ngIf="email?.invalid && email?.touched" class="error-message">
+          <span *ngIf="email?.errors?.['required']">El correo es requerido</span>
+          <span *ngIf="email?.errors?.['email']">Ingresa un correo válido</span>
         </div>
       </div>
 
@@ -41,26 +37,19 @@
         </label>
         <div class="input-wrapper">
           <span class="input-icon">🔒</span>
-          <input 
-            type="password" 
-            id="password" 
-            [value]="password"
-            (input)="onPasswordChange($event)"
-            (keyup.enter)="onSubmit()"
-            placeholder="Ingresa tu contraseña"
-            autocomplete="current-password"
-          >
+          <input type="password" id="password" formControlName="password" placeholder="Ingresa tu contraseña"
+            autocomplete="current-password" [class.invalid]="password?.invalid && password?.touched">
+        </div>
+        <div *ngIf="password?.invalid && password?.touched" class="error-message">
+          <span *ngIf="password?.errors?.['required']">La contraseña es requerida</span>
+          <span *ngIf="password?.errors?.['minLength']">Mínimo 6 caracteres</span>
         </div>
       </div>
 
-      <button 
-        type="button" 
-        class="btn-login" 
-        [disabled]="isLoading"
-        (click)="onSubmit()">
+      <button type="submit" class="btn-login" [disabled]="isLoading">
         🚀 {{ isLoading ? 'Iniciando...' : 'Iniciar Sesión' }}
       </button>
-    </div>
+    </form>
 
     <!-- FOOTER -->
     <div class="login-footer">

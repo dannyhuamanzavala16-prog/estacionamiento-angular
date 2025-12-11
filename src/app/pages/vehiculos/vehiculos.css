@@ -77,17 +77,17 @@ h2 {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.indicator.disponibles { 
+.indicator.disponibles {
   color: #34d399;
   border-color: rgba(16, 185, 129, 0.2);
 }
 
-.indicator.ocupados { 
+.indicator.ocupados {
   color: #f87171;
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-.indicator.total { 
+.indicator.total {
   color: #fbbf24;
   border-color: rgba(251, 191, 36, 0.2);
 }
@@ -218,7 +218,7 @@ label {
   margin-bottom: 0.5rem;
 }
 
-input, 
+input,
 select {
   width: 100%;
   background: rgba(15, 23, 42, 0.6);
@@ -231,7 +231,7 @@ select {
   font-family: inherit;
 }
 
-input:focus, 
+input:focus,
 select:focus {
   outline: none;
   border-color: #fbbf24;
@@ -326,12 +326,6 @@ tbody tr:hover {
   font-size: 0.9375rem;
 }
 
-.espacio-num {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 0.125rem;
-}
-
 .placa-badge {
   background: rgba(251, 191, 36, 0.15);
   color: #fbbf24;
@@ -386,6 +380,42 @@ tbody tr:hover {
 .btn-salida:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* ===== FILTROS DE TABLA ===== */
+.filter-container {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  background: rgba(15, 23, 42, 0.6);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.filter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.filter-btn-todos.active {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.filter-btn-activos.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 /* ===== ESTADÍSTICAS ===== */
@@ -444,6 +474,7 @@ tbody tr:hover {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -460,24 +491,6 @@ tbody tr:hover {
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
-}
-
-/* ===== PIE DE PÁGINA ===== */
-footer {
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(148, 163, 184, 0.1);
-  padding: 1.5rem 2rem;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.875rem;
-  z-index: 10;
-}
-
-footer strong {
-  color: #fbbf24;
-  font-weight: 600;
 }
 
 /* ===== SCROLL PERSONALIZADO ===== */
@@ -502,15 +515,32 @@ footer strong {
 }
 
 /* ===== RESPONSIVE ===== */
+
+/* Pantallas grandes-medianas (< 1600px) */
+@media (max-width: 1600px) {
+  .dashboard-grid {
+    grid-template-columns: 400px 1fr;
+    gap: 1.75rem;
+  }
+}
+
+/* Pantallas medianas (< 1400px) */
 @media (max-width: 1400px) {
+  .dashboard-grid {
+    grid-template-columns: 420px 1fr;
+    gap: 1.5rem;
+  }
+
   .spaces-grid {
     grid-template-columns: repeat(10, 1fr);
   }
 }
 
+/* Pantallas medianas-pequeñas (< 1200px) */
 @media (max-width: 1200px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
   .stats-grid {
@@ -518,13 +548,14 @@ footer strong {
   }
 
   .spaces-grid {
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(8, 1fr);
   }
 }
 
+/* Tablets pequeñas (< 768px) */
 @media (max-width: 768px) {
-  header,
-  .admin-header {
+
+  header {
     padding: 1rem;
   }
 
@@ -538,22 +569,723 @@ footer strong {
 
   section {
     padding: 1.5rem;
+    border-radius: 0.75rem;
   }
 
+  h2 {
+    font-size: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  /* Estado del estacionamiento */
+  .status-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .status-indicators {
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .indicator {
+    flex: 1;
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .btn-refresh {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Grid de espacios */
   .spaces-grid {
     grid-template-columns: repeat(5, 1fr);
     gap: 0.5rem;
   }
 
+  .space-number {
+    font-size: 0.875rem;
+  }
+
+  .space-label {
+    font-size: 0.5625rem;
+  }
+
+  .space-placa {
+    font-size: 0.5625rem;
+  }
+
+  /* Dashboard grid - Formulario y Tabla */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Formulario de registro */
+  .registro {
+    order: 1;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+
+  .registro h2 {
+    font-size: 1.125rem;
+    margin-bottom: 1.125rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  label {
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+  }
+
+  input,
+  select {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+  }
+
+  button[type="submit"] {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9375rem;
+    margin-top: 0.875rem;
+  }
+
+  /* Tabla de vehículos */
+  .tabla {
+    order: 2;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+
+  .tabla h2 {
+    font-size: 1.125rem;
+    margin-bottom: 0.875rem;
+  }
+
+  /* Botones de filtro - Layout horizontal */
+  .filter-container {
+    gap: 0.625rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    flex: 1;
+    min-width: calc(50% - 0.3125rem);
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  /* Estadísticas */
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .stat-label {
+    font-size: 0.6875rem;
+  }
+
+  /* Tabla responsive */
+  .table-container {
+    max-height: 400px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 700px;
+  }
+
+  th {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .placa-badge {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .badge-activo,
+  .badge-finalizado {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.6875rem;
+  }
+
+  .btn-salida {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .mensaje {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Móviles (< 480px) */
+@media (max-width: 480px) {
+  main {
+    padding: 0.75rem;
+  }
+
+  section {
+    padding: 1rem !important;
+    margin-bottom: 1rem;
+    border-radius: 0.625rem;
   }
 
   h2 {
-    font-size: 1.25rem;
+    font-size: 0.9375rem !important;
+    margin-bottom: 0.875rem !important;
+  }
+
+  /* Estado del estacionamiento */
+  .status-indicators {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .indicator {
+    width: 100%;
+    justify-content: center;
+    padding: 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  /* Grid de espacios */
+  .spaces-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.375rem;
+  }
+
+  .space-card {
+    padding: 0.375rem;
+    border-radius: 0.5rem;
+  }
+
+  .space-number {
+    font-size: 0.75rem;
+    margin-bottom: 0.125rem;
+  }
+
+  .space-label {
+    font-size: 0.5rem;
+  }
+
+  .space-placa {
+    font-size: 0.5rem;
+    margin-top: 0.125rem;
+  }
+
+  /* ===== DASHBOARD GRID - REGISTRO Y TABLA ===== */
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* FORMULARIO DE REGISTRO */
+  .registro {
+    padding: 0.875rem;
+    order: 1;
+    border-radius: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .registro h2 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .registro .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .registro label {
+    font-size: 0.6875rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .registro input,
+  .registro select {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+  }
+
+  .registro button[type="submit"] {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+    margin-top: 0.5rem;
+  }
+
+  /* TABLA DE VEHÍCULOS */
+  .tabla {
+    padding: 0.875rem;
+    order: 2;
+    border-radius: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tabla h2 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.625rem;
+  }
+
+  /* Botones de filtro - Layout vertical */
+  .filter-container {
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .filter-btn {
+    width: 100%;
+    padding: 0.625rem;
+    font-size: 0.75rem;
+    box-sizing: border-box;
+  }
+
+  /* Tabla container */
+  .tabla .table-container {
+    max-height: 280px;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabla table {
+    min-width: 550px;
+    font-size: 0.6875rem;
+  }
+
+  .tabla th {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.5625rem;
+  }
+
+  .tabla td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.6875rem;
+  }
+
+  .espacio-col {
+    font-size: 0.75rem;
+  }
+
+  .placa-badge {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5625rem;
+  }
+
+  .badge-activo,
+  .badge-finalizado {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5625rem;
+  }
+
+  .btn-salida {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.5625rem;
+    white-space: nowrap;
+  }
+
+  /* Estadísticas */
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.6875rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  /* Tabla */
+  .table-container {
+    max-height: 350px;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  th {
+    padding: 0.625rem 0.375rem;
+    font-size: 0.625rem;
+  }
+
+  td {
+    padding: 0.625rem 0.375rem;
+    font-size: 0.75rem;
+  }
+
+  .espacio-col {
+    font-size: 0.8125rem;
+  }
+
+  .placa-badge {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.625rem;
+  }
+
+  .badge-activo,
+  .badge-finalizado {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.625rem;
+  }
+
+  .btn-salida {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.6875rem;
+    white-space: nowrap;
+  }
+
+  /* Animaciones más suaves */
+  .space-card:hover {
+    transform: scale(1.03);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+  }
+
+  tbody tr:hover {
+    transform: none;
+  }
+}
+
+/* ===== FIX RESPONSIVE PARA FORMULARIO Y TABLA ===== */
+
+/* Tablets pequeñas (< 768px) */
+@media (max-width: 768px) {
+
+  /* FORMULARIO - Ajustes mejorados */
+  .registro {
+    padding: 1.25rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  label {
+    font-size: 0.8125rem;
+    margin-bottom: 0.375rem;
+  }
+
+  input,
+  select {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.875rem;
+  }
+
+  button[type="submit"] {
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  /* TABLA - Mejoras específicas */
+  .tabla {
+    padding: 1.25rem;
   }
 
   .table-container {
-    max-height: 400px;
+    max-height: 450px;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 900px;
+    font-size: 0.8125rem;
+  }
+
+  th {
+    padding: 0.75rem 0.625rem;
+    font-size: 0.6875rem;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.75rem 0.625rem;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .espacio-col {
+    font-size: 0.875rem;
+  }
+
+  .placa-badge {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  .badge-activo,
+  .badge-finalizado {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.6875rem;
+    white-space: nowrap;
+  }
+
+  .btn-salida {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* Indicador de scroll horizontal */
+  .table-container::after {
+    content: '← Desliza →';
+    position: sticky;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent);
+    padding: 0.75rem;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  .table-container::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .table-container::-webkit-scrollbar-thumb {
+    background: rgba(251, 191, 36, 0.4);
+    border-radius: 3px;
+  }
+}
+
+/* Móviles extra pequeños (< 360px) */
+@media (max-width: 360px) {
+  main {
+    padding: 0.5rem;
+  }
+
+  section {
+    padding: 0.875rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+  }
+
+  h2 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+    gap: 0.25rem;
+  }
+
+  /* Estado del estacionamiento */
+  .parking-status {
+    padding: 0.875rem;
+  }
+
+  .status-indicators {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .indicator {
+    width: 100%;
+    padding: 0.625rem;
+    font-size: 0.6875rem;
+  }
+
+  .btn-refresh {
+    width: 100%;
+    padding: 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  /* Grid de espacios */
+  .spaces-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.25rem;
+  }
+
+  .space-card {
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+  }
+
+  .space-number {
+    font-size: 0.625rem;
+  }
+
+  .space-label {
+    font-size: 0.4375rem;
+  }
+
+  .space-placa {
+    font-size: 0.4375rem;
+  }
+
+  /* Dashboard grid */
+  .dashboard-grid {
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* FORMULARIO - Compacto extremo */
+  .registro {
+    padding: 0.75rem;
+    order: 1;
+    border-radius: 0.5rem;
+  }
+
+  .registro h2 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  label {
+    font-size: 0.6875rem;
+    margin-bottom: 0.25rem;
+  }
+
+  input,
+  select {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+  }
+
+  button[type="submit"] {
+    padding: 0.625rem 1rem;
+    font-size: 0.8125rem;
+    margin-top: 0.5rem;
+  }
+
+  /* TABLA - Ultra compacta */
+  .tabla {
+    padding: 0.75rem;
+    order: 2;
+    border-radius: 0.5rem;
+  }
+
+  .tabla h2 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.625rem;
+  }
+
+  /* Botones de filtro ultra compactos */
+  .filter-container {
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.625rem;
+  }
+
+  .filter-btn {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  /* Tabla */
+  .table-container {
+    max-height: 300px;
+    border-radius: 0.375rem;
+  }
+
+  table {
+    min-width: 600px;
+    font-size: 0.6875rem;
+  }
+
+  th {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.5625rem;
+  }
+
+  td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.6875rem;
+  }
+
+  .espacio-col {
+    font-size: 0.75rem;
+  }
+
+  .placa-badge {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5625rem;
+  }
+
+  .badge-activo,
+  .badge-finalizado {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5625rem;
+  }
+
+  .btn-salida {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.5625rem;
+    white-space: nowrap;
+  }
+
+  /* Estadísticas */
+  .quick-stats {
+    padding: 0.75rem;
+  }
+
+  .stats-grid {
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.875rem;
+  }
+
+  .stat-label {
+    font-size: 0.5625rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
   }
 }

@@ -2,15 +2,18 @@
 <main>
 
   <!-- INDICADOR DE CARGA -->
-  <div *ngIf="cargando" style="text-align: center; padding: 3rem; background: rgba(30, 41, 59, 0.6); border-radius: 1rem; margin-bottom: 2rem;">
-    <div style="display: inline-block; width: 50px; height: 50px; border: 4px solid rgba(251, 191, 36, 0.2); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+  <div *ngIf="cargando"
+    style="text-align: center; padding: 3rem; background: rgba(30, 41, 59, 0.6); border-radius: 1rem; margin-bottom: 2rem;">
+    <div
+      style="display: inline-block; width: 50px; height: 50px; border: 4px solid rgba(251, 191, 36, 0.2); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite;">
+    </div>
     <p style="margin-top: 1rem; color: #cbd5e1; font-size: 1.125rem;">Cargando datos desde Firebase...</p>
   </div>
 
   <!-- ESTADO EN TIEMPO REAL -->
   <section class="parking-status">
     <div class="status-header">
-      <h2>🅿️ Estado del Estacionamiento en Tiempo Real</h2>
+      <h2>🅿️ Estado del Estacionamiento</h2>
       <div class="status-indicators">
         <div class="indicator disponibles">
           🟢 <span>{{ espaciosLibres }}</span> Libres
@@ -26,22 +29,19 @@
         </button>
       </div>
     </div>
-    
+
     <!-- GRID DE ESPACIOS DINÁMICO -->
     <div class="spaces-grid">
-      <div
-        *ngFor="let espacio of espaciosUI"
-        [ngClass]="obtenerClaseEspacio(espacio)"
+      <div *ngFor="let espacio of espaciosUI" [ngClass]="obtenerClaseEspacio(espacio)"
         (click)="mostrarDetallesEspacio(espacio)"
-        [title]="espacio.ocupado ? 'Click para ver detalles' : 'Espacio disponible'"
-      >
+        [title]="espacio.ocupado ? 'Click para ver detalles' : 'Espacio disponible'">
         <div class="space-number">E-{{ espacio.numero < 10 ? '0' + espacio.numero : espacio.numero }}</div>
-        <div class="space-label">{{ obtenerTextoEspacio(espacio) }}</div>
-        <div class="space-placa" *ngIf="espacio.ocupado && espacio.placa">
-          {{ espacio.placa }}
+            <div class="space-label">{{ obtenerTextoEspacio(espacio) }}</div>
+            <div class="space-placa" *ngIf="espacio.ocupado && espacio.placa">
+              {{ espacio.placa }}
+            </div>
         </div>
       </div>
-    </div>
   </section>
 
   <div class="dashboard-grid">
@@ -49,32 +49,19 @@
     <!-- FORMULARIO DE REGISTRO -->
     <section class="registro">
       <h2>📋 Registrar Entrada de Vehículo</h2>
-      
+
       <form (submit)="registrarVehiculo($event)">
         <div class="form-group">
           <label for="placa">Placa del Vehículo *</label>
-          <input 
-            type="text" 
-            id="placa" 
-            placeholder="ABC-123" 
-            required
-            [disabled]="procesando"
-            maxlength="10"
-            style="text-transform: uppercase;"
-          >
+          <input type="text" id="placa" placeholder="ABC-123" required [disabled]="procesando" maxlength="10"
+            style="text-transform: uppercase;">
         </div>
-        
+
         <div class="form-group">
           <label for="propietario">Propietario *</label>
-          <input 
-            type="text" 
-            id="propietario" 
-            placeholder="Juan Pérez" 
-            required
-            [disabled]="procesando"
-          >
+          <input type="text" id="propietario" placeholder="Juan Pérez" required [disabled]="procesando">
         </div>
-        
+
         <div class="form-group">
           <label for="tipo">Tipo de Vehículo *</label>
           <select id="tipo" required [disabled]="procesando">
@@ -86,42 +73,33 @@
             <option value="Camión">Camión 🚚</option>
           </select>
         </div>
-        
+
         <button type="submit" [disabled]="procesando || espaciosLibres === 0">
           <span *ngIf="!procesando">✓ Registrar Entrada</span>
           <span *ngIf="procesando">⏳ Procesando...</span>
         </button>
 
-        <div *ngIf="espaciosLibres === 0" style="margin-top: 1rem; padding: 0.875rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #f87171; text-align: center; font-weight: 600;">
+        <div *ngIf="espaciosLibres === 0"
+          style="margin-top: 1rem; padding: 0.875rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0.5rem; color: #f87171; text-align: center; font-weight: 600;">
           ⚠️ No hay espacios disponibles
         </div>
       </form>
-      
+
       <div id="mensaje" class="mensaje" style="display: none;"></div>
     </section>
-    
+
     <!-- TABLA DE VEHÍCULOS EN TIEMPO REAL -->
     <section class="tabla">
-      <h2>🚗 Vehículos Registrados (Tiempo Real)</h2>
-      
+      <h2>🚗 Vehículos Registrados</h2>
+
       <!-- FILTROS RÁPIDOS -->
-      <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
-        <button 
-          (click)="cambiarFiltro('todos')"
-          [style.background]="filtroActual === 'todos' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(15, 23, 42, 0.6)'"
-          [style.color]="filtroActual === 'todos' ? '#fbbf24' : '#cbd5e1'"
-          [style.border]="filtroActual === 'todos' ? '1px solid rgba(251, 191, 36, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'"
-          style="padding: 0.625rem 1.25rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.3s ease;"
-        >
+      <div class="filter-container">
+        <button (click)="cambiarFiltro('todos')" [class.active]="filtroActual === 'todos'"
+          class="filter-btn filter-btn-todos">
           📋 Todos ({{ vehiculos.length }})
         </button>
-        <button 
-          (click)="cambiarFiltro('activos')"
-          [style.background]="filtroActual === 'activos' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(15, 23, 42, 0.6)'"
-          [style.color]="filtroActual === 'activos' ? '#34d399' : '#cbd5e1'"
-          [style.border]="filtroActual === 'activos' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'"
-          style="padding: 0.625rem 1.25rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.3s ease;"
-        >
+        <button (click)="cambiarFiltro('activos')" [class.active]="filtroActual === 'activos'"
+          class="filter-btn filter-btn-activos">
           ✅ Activos ({{ vehiculosActivos }})
         </button>
       </div>
@@ -147,10 +125,12 @@
                 🔭 No hay vehículos {{ filtroActual === 'activos' ? 'activos' : 'registrados' }} actualmente.
               </td>
             </tr>
-            
+
             <tr *ngIf="cargando">
               <td colspan="9" style="text-align:center; padding: 2rem;">
-                <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(251, 191, 36, 0.2); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <div
+                  style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(251, 191, 36, 0.2); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite;">
+                </div>
                 <p style="margin-top: 0.5rem; color: #94a3b8;">Cargando vehículos...</p>
               </td>
             </tr>
@@ -158,8 +138,8 @@
             <tr *ngFor="let vehiculo of vehiculosFiltrados">
               <td>
                 <div class="espacio-col">
-                  E-{{ vehiculo.espacioNumero ? (vehiculo.espacioNumero < 10 ? '0' + vehiculo.espacioNumero : vehiculo.espacioNumero) : '-' }}
-                </div>
+                  E-{{ vehiculo.espacioNumero ? (vehiculo.espacioNumero < 10 ? '0' + vehiculo.espacioNumero :
+                    vehiculo.espacioNumero) : '-' }} </div>
               </td>
               <td>
                 <span class="placa-badge">{{ vehiculo.placa }}</span>
@@ -177,18 +157,11 @@
                 </span>
               </td>
               <td>
-                <button 
-                  *ngIf="vehiculo.estado === 'Dentro'" 
-                  (click)="finalizarVehiculo(vehiculo)"
-                  class="btn-salida"
-                  [disabled]="procesando"
-                >
+                <button *ngIf="vehiculo.estado === 'Dentro'" (click)="finalizarVehiculo(vehiculo)" class="btn-salida"
+                  [disabled]="procesando">
                   🚀 Registrar Salida
                 </button>
-                <span 
-                  *ngIf="vehiculo.estado === 'Fuera'" 
-                  style="color: #64748b; font-size: 0.875rem;"
-                >
+                <span *ngIf="vehiculo.estado === 'Fuera'" style="color: #64748b; font-size: 0.875rem;">
                   ✓ Completado
                 </span>
               </td>
@@ -202,7 +175,7 @@
   <!-- ESTADÍSTICAS RÁPIDAS EN TIEMPO REAL -->
   <section class="quick-stats">
     <h2>📊 Estadísticas de Hoy (Actualización Automática)</h2>
-    
+
     <div class="stats-grid">
       <div class="stat-card">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚗</div>
@@ -232,24 +205,20 @@
       </div>
     </div>
   </section>
-<!-- Al final de vehiculos.html, antes de </main> -->
+  <!-- Al final de vehiculos.html, antes de </main> -->
 
-<!-- 🆕 MODAL COMPONENT -->
-<app-modal
-  [isOpen]="modalOpen"
-  [config]="modalConfig"
-  (onConfirm)="confirmarSalida()"
-  (onCancel)="cancelarModal()"
-  (onClose)="cerrarModal()">
-</app-modal>
+  <!-- 🆕 MODAL COMPONENT -->
+  <app-modal [isOpen]="modalOpen" [config]="modalConfig" (onConfirm)="confirmarSalida()" (onCancel)="cancelarModal()"
+    (onClose)="cerrarModal()">
+  </app-modal>
 
 </main>
 
-
-
 <!-- Animación de spin -->
 <style>
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 </style>
