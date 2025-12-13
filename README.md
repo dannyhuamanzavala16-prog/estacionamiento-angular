@@ -148,15 +148,8 @@ https://controldeestacionamiento.web.app/
 
 ### Video de Presentación (5-8 minutos)
 
-📹 **[Ver Video en YouTube]  ()**
+[](https://drive.google.com/file/d/1Mkh2schBLXPZSH3_pHLxuh_d_A7Qg8le/view?usp=drive_link)
 
-El video incluye:
-- ✅ Demostración de funcionalidades principales
-- ✅ Flujo completo de autenticación
-- ✅ Registro y lectura de datos en Firestore
-- ✅ Explicación del código (componentes, servicios y guards)
-
----
 
 ## 📖 Manual de Usuario
 
