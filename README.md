@@ -148,7 +148,7 @@ https://controldeestacionamiento.web.app/
 
 ### Video de Presentación (5-8 minutos)
 
-[](https://drive.google.com/file/d/1Mkh2schBLXPZSH3_pHLxuh_d_A7Qg8le/view?usp=drive_link)
+https://drive.google.com/file/d/1Mkh2schBLXPZSH3_pHLxuh_d_A7Qg8le/view?usp=drive_link
 
 
 ## 📖 Manual de Usuario
